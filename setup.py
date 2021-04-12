@@ -17,7 +17,7 @@
 # US Patents 2008-2021: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
 # China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -41,7 +41,7 @@ setup(
     author='Neongecko',
     author_email='developers@neon.ai',
     license='NeonAI License v1.0',
-    packages=['neon_audio'],
+    packages=find_packages(),
     install_requires=requirements,
     zip_safe=True,
     classifiers=[

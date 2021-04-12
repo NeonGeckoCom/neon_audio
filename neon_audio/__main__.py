@@ -22,7 +22,7 @@ from neon_utils.logger import LOG
 # from mycroft.configuration import Configuration
 # from mycroft.messagebus import get_messagebus
 
-import speech
+from neon_audio import speech
 from neon_audio.audioservice import AudioService
 
 from mycroft.util import reset_sigint_handler, wait_for_exit_signal, \
