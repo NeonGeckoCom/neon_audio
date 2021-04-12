@@ -41,7 +41,7 @@ setup(
     author='Neongecko',
     author_email='developers@neon.ai',
     license='NeonAI License v1.0',
-    packages=['neon_core_server'],
+    packages=['neon_audio'],
     install_requires=requirements,
     zip_safe=True,
     classifiers=[
