@@ -222,12 +222,13 @@ class TTS(metaclass=ABCMeta):
 
         self.cache_dir = os.path.expanduser(NGIConfig("ngi_local_conf").get('dirVars', {})
                                             .get('cacheDir') or "~/.local/share/neon")
-        self.lang_dict_loc = os.path.join(self.cache_dir, 'lang_dict.txt')
-        if not pathlib.Path(self.lang_dict_loc).exists():
+        self.translation_cache = os.path.join(self.cache_dir, 'lang_dict.txt')
+        if not pathlib.Path(self.translation_cache).exists():
             self.cached_translations = {}
-            open(self.lang_dict_loc, 'wb+')
+            os.makedirs(os.path.dirname(self.translation_cache), exist_ok=True)
+            open(self.translation_cache, 'wb+').close()
         else:
-            with open(self.lang_dict_loc, 'rb') as cached_utterances:
+            with open(self.translation_cache, 'rb') as cached_utterances:
                 try:
                     self.cached_translations = pickle.load(cached_utterances)
                 except EOFError:
@@ -475,7 +476,7 @@ class TTS(metaclass=ABCMeta):
             return tts_reqs
 
         def _update_pickle():
-            with open(self.lang_dict_loc, 'wb+') as cached_utterances:
+            with open(self.translation_cache, 'wb+') as cached_utterances:
                 pickle.dump(self.cached_translations, cached_utterances)
 
         if self.phonetic_spelling:
