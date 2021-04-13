@@ -563,7 +563,7 @@ class TTS(metaclass=ABCMeta):
                     for response in response_audio_files:
                         self.queue.put((self.audio_ext, str(response), vis, ident, listen))
                 else:
-                    check_for_signal("CORE_isSpeaking")
+                    check_for_signal("isSpeaking")
 
     def viseme(self, phonemes):
         """Create visemes from phonemes. Needs to be implemented for all
