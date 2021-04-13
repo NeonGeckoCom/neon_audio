@@ -14,6 +14,11 @@
 #
 import time
 from ovos_utils.signal import check_for_signal, create_signal
+from neon_utils.configuration_utils import get_neon_local_config
+
+
+IPC_PATH = get_neon_local_config().get("dirVars", {}).get("ipcDir", "/tmp/neon/ipc")
+CONFIG = {"ipc_path": IPC_PATH}
 
 
 def is_speaking():
@@ -22,7 +27,7 @@ def is_speaking():
     Returns:
         bool: True while still speaking
     """
-    return check_for_signal("isSpeaking", -1)
+    return check_for_signal("isSpeaking", -1, CONFIG)
 
 
 def wait_while_speaking():
@@ -45,8 +50,8 @@ def stop_speaking():
     send('mycroft.audio.speech.stop')
 
     # Block until stopped
-    while check_for_signal("isSpeaking", -1):
+    while check_for_signal("isSpeaking", -1, CONFIG):
         time.sleep(0.25)
 
     # This consumes the signal
-    check_for_signal('stoppingTTS')
+    check_for_signal('stoppingTTS', CONFIG)
