@@ -1,3 +1,26 @@
+# NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
+#
+# Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
+#
+# Notice of License - Duplicating this Notice of License near the start of any file containing
+# a derivative of this software is a condition of license for this software.
+# Friendly Licensing:
+# No charge, open source royalty free use of the Neon AI software source and object is offered for
+# educational users, noncommercial enthusiasts, Public Benefit Corporations (and LLCs) and
+# Social Purpose Corporations (and LLCs). Developers can contact developers@neon.ai
+# For commercial licensing, distribution of derivative works or redistribution please contact licenses@neon.ai
+# Distributed on an "AS IS” basis without warranties or conditions of any kind, either express or implied.
+# Trademarks of Neongecko: Neon AI(TM), Neon Assist (TM), Neon Communicator(TM), Klat(TM)
+# Authors: Guy Daniels, Daniel McKnight, Regina Bloomstine, Elon Gasper, Richard Leeds
+#
+# Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
+# US Patents 2008-2021: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
+# China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
+#
+# This software is an enhanced derivation of the Mycroft Project which is licensed under the
+# Apache software Foundation software license 2.0 https://www.apache.org/licenses/LICENSE-2.0
+# Changes Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
+#
 # Copyright 2017 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,11 +50,11 @@ from mycroft.tts.mimic_tts import Mimic
 from mycroft.metrics import report_timing, Stopwatch
 
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
-config: Optional[dict] = None
+config: Optional[NGIConfig] = None
 tts: Optional[TTS] = None
+mimic_fallback_obj: Optional[TTS] = None
 tts_hash = None
 lock = Lock()
-mimic_fallback_obj = None
 speak_muted = False
 
 _last_stop_signal = 0
@@ -56,7 +79,7 @@ def handle_mute_status(event):
     bus.emit(Message("mycroft.tts.mute_status", {"muted": speak_muted}))
 
 
-def handle_speak(event):
+def handle_speak(message):
     """Handle "speak" message
 
     Parse sentences and invoke text to speech service.
@@ -64,7 +87,7 @@ def handle_speak(event):
     # Configuration.set_config_update_handlers(bus)
     global _last_stop_signal
 
-    event.context = event.context or {}
+    message.context = message.context or {}
 
     # if the message is targeted and audio is not the target don't
     # don't synthezise speech
@@ -72,36 +95,35 @@ def handle_speak(event):
     #     return
 
     # Get conversation ID
-    event.context['ident'] = event.context.get("ident", "unknown")
+    message.context['ident'] = message.context.get("ident", "unknown")
 
     with lock:
         stopwatch = Stopwatch()
         stopwatch.start()
-        utterance = event.data['utterance']
-        mute_and_speak(utterance, event)
+        utterance = message.data['utterance']
+        mute_and_speak(utterance, message)
         stopwatch.stop()
-    report_timing(event.context['ident'], 'speech', stopwatch,
+    report_timing(message.context['ident'], 'speech', stopwatch,
                   {'utterance': utterance, 'tts': tts.__class__.__name__})
 
 
-def mute_and_speak(utterance, event):
+def mute_and_speak(utterance, message):
     """Mute mic and start speaking the utterance using selected tts backend.
 
     Arguments:
         utterance:  The sentence to be spoken
-        ident:      Ident tying the utterance to the source query
+        message:    Message associated with request
     """
-    global tts_hash, speak_muted
+    global tts_hash, speak_muted, tts
     LOG.info("Speak: " + utterance)
     if speak_muted:
         LOG.warning("Tried to speak, but TTS is muted!")
         return
 
-    listen = event.data.get('expect_response', False)
+    listen = message.data.get('expect_response', False)
 
     # update TTS object if configuration has changed
     if tts_hash != hash(str(config.get('tts', ''))):
-        global tts
         # Stop tts playback thread
         tts.playback.stop()
         tts.playback.join()
@@ -111,16 +133,17 @@ def mute_and_speak(utterance, event):
         tts_hash = hash(str(config.get('tts', '')))
 
     try:
-        tts.execute(utterance, event.context['ident'], listen, event)
+        tts.execute(utterance, message.context['ident'], listen, message)
     except RemoteTTSTimeoutException as e:
         LOG.error(e)
-        mimic_fallback_tts(utterance, event.context['ident'], event)
+        mimic_fallback_tts(utterance, message.context['ident'], message)
     except Exception as e:
         LOG.error('TTS execution failed ({})'.format(repr(e)))
 
 
 def mimic_fallback_tts(utterance, ident, event=None):
     global mimic_fallback_obj
+    # TODO: This could also be Mozilla TTS DM
     # fallback if connection is lost
     mimic_config = get_neon_local_config()
     tts_config = mimic_config.get('tts', {}).get("mimic", {})
