@@ -1,2 +1,2 @@
-# neon_audio
-Audio Module for Neon Core
+# Neon Audio
+Audio Module for Neon Core.
