@@ -504,7 +504,7 @@ class TTS(metaclass=ABCMeta):
                 file = os.path.join(self.cache_dir, "tts", self.tts_name,
                                     request["language"], request["gender"], key + '.' + self.audio_ext)
                 lang = request["language"]
-                text = None
+                translated_sentence = None
                 try:
                     # Handle any missing cache directories
                     if not exists(os.path.dirname(file)):
@@ -518,24 +518,26 @@ class TTS(metaclass=ABCMeta):
 
                         # Get cached translation (remove audio if no corresponding translation)
                         if f"{lang}{key}" in self.cached_translations:
-                            text = self.cached_translations[f"{lang}{key}"]
+                            translated_sentence = self.cached_translations[f"{lang}{key}"]
                         else:
                             LOG.error("cache error! Removing audio file")
                             os.remove(file)
 
                     # If no file cached or cache error was encountered, get tts
-                    if not text:
+                    if not translated_sentence:
                         LOG.debug(f"{lang}{key} not cached")
-                        if not lang.split("-", 1)[0] == "en":
+                        if not lang.split("-", 1)[0] == "en":  # TODO: Internal lang DM
                             try:
-                                sentence = self.translator.translate(sentence, lang, "en")
+                                translated_sentence = self.translator.translate(sentence, lang, "en")
                                 # request["translated"] = True
-                                LOG.info(sentence)
+                                LOG.info(translated_sentence)
                             except Exception as e:
                                 LOG.error(e)
-                        file, phonemes = self.get_tts(sentence, file, request)
+                        else:
+                            translated_sentence = sentence
+                        file, phonemes = self.get_tts(translated_sentence, file, request)
                         # Update cache for next time
-                        self.cached_translations[f"{lang}{key}"] = text
+                        self.cached_translations[f"{lang}{key}"] = translated_sentence
                         LOG.debug(">>>Cache Updated!<<<")
                         _update_pickle()
                 except Exception as e:
@@ -545,7 +547,7 @@ class TTS(metaclass=ABCMeta):
                         os.remove(file)
 
                 if not responses.get(lang):
-                    responses[lang] = {"sentence": text}
+                    responses[lang] = {"sentence": translated_sentence}
                 if os.path.isfile(file):  # Based on <speak> tags, this may not exist
                     responses[lang][request["gender"]] = file
                     response_audio_files.append(file)
