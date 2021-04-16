@@ -416,30 +416,25 @@ class TTS(metaclass=ABCMeta):
                                      "voice": speaker.get("voice")
                                      })
                     LOG.debug(f">>> speaker={speaker}")
-                # General server response, use profile data
+
+                # If multiple profiles attached to message, get TTS for all of them
                 elif profiles:
-                    nick = msg.context["username"]
-                    LOG.debug(f">>> profiles={profiles}")
-                    user_config = profiles[nick]["speech"]
-
-                    tts_reqs.append({"speaker": tts_name,
-                                     "language": user_config["tts_language"],
-                                     "gender": user_config["tts_gender"],
-                                     "voice": user_config["neon_voice"]
-                                     })
-
-                    if user_config["secondary_tts_language"]:
-                        tts_reqs.append({"speaker": tts_name,
-                                         "language": user_config["secondary_tts_language"],
-                                         "gender": user_config["secondary_tts_gender"],
-                                         "voice": user_config["secondary_neon_voice"]
-                                         })
+                    for nickname in profiles:
+                        chat_user = profiles.get(nickname, None)
+                        language = chat_user.get('tts_language', 'en-us')
+                        gender = chat_user.get('tts_gender', 'female')
+                        LOG.debug('>>> 0.6 nickname = ' + nickname)
+                        data = {"speaker": tts_name,
+                                "language": language,
+                                "gender": gender,
+                                "voice": None
+                                }
+                        if data not in tts_reqs:
+                            tts_reqs.append(data)
 
                 # General non-server response, use yml configuration
                 else:
-                    # if check_for_signal("TTS_voice_switch"):
-                    #     self.user_config = self.ngiConfig.check_for_updates()
-                    user_config = NGIConfig("ngi_user_info")["speech"]
+                    user_config = NGIConfig("ngi_user_info")["speech"]  # TODO: Consider using get_neon_user_config DM
 
                     tts_reqs.append({"speaker": tts_name,
                                      "language": user_config["tts_language"],
@@ -457,22 +452,8 @@ class TTS(metaclass=ABCMeta):
             except Exception as x:
                 LOG.error(x)
 
-            # Server iterate over other users in conversation
-            if profiles and not msg.data.get("speaker"):
-                for nickname in profiles:
-                    chat_user = profiles.get(nickname, None)
-                    language = chat_user.get('tts_language', 'en-us')
-                    gender = chat_user.get('tts_gender', 'female')
-                    LOG.debug('>>> 0.6 nickname = ' + nickname)
-                    data = {"speaker": tts_name,
-                            "language": language,
-                            "gender": gender,
-                            "voice": None
-                            }
-                    if data not in tts_reqs:
-                        tts_reqs.append(data)
-
             # TODO: Associate voice with cache here somehow? (would be a per-TTS engine set) DM
+            LOG.debug(f"Got {len(tts_reqs)} TTS Voice Requests")
             return tts_reqs
 
         def _update_pickle():
