@@ -416,30 +416,25 @@ class TTS(metaclass=ABCMeta):
                                      "voice": speaker.get("voice")
                                      })
                     LOG.debug(f">>> speaker={speaker}")
-                # General server response, use profile data
+
+                # If multiple profiles attached to message, get TTS for all of them
                 elif profiles:
-                    nick = msg.context["username"]
-                    LOG.debug(f">>> profiles={profiles}")
-                    user_config = profiles[nick]["speech"]
-
-                    tts_reqs.append({"speaker": tts_name,
-                                     "language": user_config["tts_language"],
-                                     "gender": user_config["tts_gender"],
-                                     "voice": user_config["neon_voice"]
-                                     })
-
-                    if user_config["secondary_tts_language"]:
-                        tts_reqs.append({"speaker": tts_name,
-                                         "language": user_config["secondary_tts_language"],
-                                         "gender": user_config["secondary_tts_gender"],
-                                         "voice": user_config["secondary_neon_voice"]
-                                         })
+                    for nickname in profiles:
+                        chat_user = profiles.get(nickname, None)
+                        language = chat_user.get('tts_language', 'en-us')
+                        gender = chat_user.get('tts_gender', 'female')
+                        LOG.debug('>>> 0.6 nickname = ' + nickname)
+                        data = {"speaker": tts_name,
+                                "language": language,
+                                "gender": gender,
+                                "voice": None
+                                }
+                        if data not in tts_reqs:
+                            tts_reqs.append(data)
 
                 # General non-server response, use yml configuration
                 else:
-                    # if check_for_signal("TTS_voice_switch"):
-                    #     self.user_config = self.ngiConfig.check_for_updates()
-                    user_config = NGIConfig("ngi_user_info")["speech"]
+                    user_config = NGIConfig("ngi_user_info")["speech"]  # TODO: Consider using get_neon_user_config DM
 
                     tts_reqs.append({"speaker": tts_name,
                                      "language": user_config["tts_language"],
@@ -457,22 +452,8 @@ class TTS(metaclass=ABCMeta):
             except Exception as x:
                 LOG.error(x)
 
-            # Server iterate over other users in conversation
-            if profiles and not msg.data.get("speaker"):
-                for nickname in profiles:
-                    chat_user = profiles.get(nickname, None)
-                    language = chat_user.get('tts_language', 'en-us')
-                    gender = chat_user.get('tts_gender', 'female')
-                    LOG.debug('>>> 0.6 nickname = ' + nickname)
-                    data = {"speaker": tts_name,
-                            "language": language,
-                            "gender": gender,
-                            "voice": None
-                            }
-                    if data not in tts_reqs:
-                        tts_reqs.append(data)
-
             # TODO: Associate voice with cache here somehow? (would be a per-TTS engine set) DM
+            LOG.debug(f"Got {len(tts_reqs)} TTS Voice Requests")
             return tts_reqs
 
         def _update_pickle():
@@ -504,7 +485,7 @@ class TTS(metaclass=ABCMeta):
                 file = os.path.join(self.cache_dir, "tts", self.tts_name,
                                     request["language"], request["gender"], key + '.' + self.audio_ext)
                 lang = request["language"]
-                text = None
+                translated_sentence = None
                 try:
                     # Handle any missing cache directories
                     if not exists(os.path.dirname(file)):
@@ -518,24 +499,26 @@ class TTS(metaclass=ABCMeta):
 
                         # Get cached translation (remove audio if no corresponding translation)
                         if f"{lang}{key}" in self.cached_translations:
-                            text = self.cached_translations[f"{lang}{key}"]
+                            translated_sentence = self.cached_translations[f"{lang}{key}"]
                         else:
                             LOG.error("cache error! Removing audio file")
                             os.remove(file)
 
                     # If no file cached or cache error was encountered, get tts
-                    if not text:
+                    if not translated_sentence:
                         LOG.debug(f"{lang}{key} not cached")
-                        if not lang.split("-", 1)[0] == "en":
+                        if not lang.split("-", 1)[0] == "en":  # TODO: Internal lang DM
                             try:
-                                sentence = self.translator.translate(sentence, lang, "en")
+                                translated_sentence = self.translator.translate(sentence, lang, "en")
                                 # request["translated"] = True
-                                LOG.info(sentence)
+                                LOG.info(translated_sentence)
                             except Exception as e:
                                 LOG.error(e)
-                        file, phonemes = self.get_tts(sentence, file, request)
+                        else:
+                            translated_sentence = sentence
+                        file, phonemes = self.get_tts(translated_sentence, file, request)
                         # Update cache for next time
-                        self.cached_translations[f"{lang}{key}"] = text
+                        self.cached_translations[f"{lang}{key}"] = translated_sentence
                         LOG.debug(">>>Cache Updated!<<<")
                         _update_pickle()
                 except Exception as e:
@@ -545,7 +528,7 @@ class TTS(metaclass=ABCMeta):
                         os.remove(file)
 
                 if not responses.get(lang):
-                    responses[lang] = {"sentence": text}
+                    responses[lang] = {"sentence": translated_sentence}
                 if os.path.isfile(file):  # Based on <speak> tags, this may not exist
                     responses[lang][request["gender"]] = file
                     response_audio_files.append(file)
