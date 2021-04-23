@@ -54,7 +54,8 @@ from neon_utils.language_utils import DetectorFactory, TranslatorFactory
 from neon_utils.configuration_utils import get_neon_lang_config, get_neon_local_config, NGIConfig
 from neon_enclosure.enclosure.api import EnclosureAPI
 from mycroft_bus_client import Message
-from ovos_utils.plugins import load_plugin
+from ovos_plugin_manager.tts import load_tts_plugin
+# from ovos_utils.plugins import load_plugin
 from neon_utils.logger import LOG
 
 import mycroft.util
@@ -661,13 +662,13 @@ class TTSValidator(metaclass=ABCMeta):
         pass
 
 
-def load_tts_plugin(module_name):
-    """Wrapper function for loading tts plugin.
-
-    Arguments:
-        (str) Mycroft tts module name from config
-    """
-    return load_plugin('mycroft.plugin.tts', module_name)
+# def load_tts_plugin(module_name):
+#     """Wrapper function for loading tts plugin.
+#
+#     Arguments:
+#         (str) Mycroft tts module name from config
+#     """
+#     return load_plugin('mycroft.plugin.tts', module_name)
 
 
 class TTSFactory:
