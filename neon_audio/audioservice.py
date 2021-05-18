@@ -44,7 +44,7 @@ from threading import Lock, Event
 from mycroft_bus_client import Message
 from neon_utils.configuration_utils import get_neon_audio_config
 from neon_utils.logger import LOG
-from ovos_utils.plugins import find_plugins
+from ovos_plugin_manager import find_plugins
 
 from neon_audio.services import RemoteAudioBackend
 
