@@ -1,8 +1,9 @@
 requests
+holmesV
 mycroft-messagebus-client>=0.8.4
 ovos_utils~=0.0.8
 ovos_plugin_manager
 python-vlc==1.1.2
 neon-utils @ git+https://github.com/neongeckocom/neon-skill-utils
 neon_enclosure @ git+https://github.com/neongeckocom/neon-enclosure
-holmesv @ git+https://github.com/HelloChatterbox/holmesv
+mycroft-lib @ git+https://github.com/HelloChatterbox/mycroft-lib
