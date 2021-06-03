@@ -32,8 +32,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.__main__ import main as neon_audio_main
 
 TEST_CONFIG = get_neon_audio_config()
-TEST_CONFIG["tts"] = TEST_CONFIG.get("tts", {})  # TODO: Depreciate with neon_utils update DM
-TEST_CONFIG["tts"]["module"] = "amazon_polly"
+TEST_CONFIG["tts"]["module"] = "mozilla_remote"
 TEST_CONFIG["tts"]["mozilla_remote"] = {"api_url": "http://64.34.186.120:5002"}
 # TODO: Also export URL for testing DM
 
