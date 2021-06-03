@@ -51,8 +51,7 @@ from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
 
 from neon_utils.language_utils import DetectorFactory, TranslatorFactory
-from neon_utils.configuration_utils import get_neon_lang_config, get_neon_local_config, NGIConfig
-from neon_enclosure.enclosure.api import EnclosureAPI
+from neon_utils.configuration_utils import get_neon_lang_config, get_neon_local_config, NGIConfig, get_neon_audio_config
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 # from ovos_utils.plugins import load_plugin
@@ -63,6 +62,11 @@ from mycroft.metrics import report_timing, Stopwatch
 from mycroft.util import (
     play_wav, play_mp3, check_for_signal, create_signal, resolve_resource_file
 )
+
+try:  # TODO: Is this necessary anymore? DM
+    from neon_enclosure.enclosure.api import EnclosureAPI
+except ImportError:
+    EnclosureAPI = None
 
 _TTS_ENV = deepcopy(os.environ)
 _TTS_ENV['PULSE_PROP'] = 'media.role=phone'
@@ -75,7 +79,7 @@ class PlaybackThread(Thread):
     viseme data to enclosure.
     """
 
-    def __init__(self, queue):
+    def __init__(self, queue, config=None):
         super(PlaybackThread, self).__init__()
         self.tts = None
         self.queue = queue
@@ -84,7 +88,8 @@ class PlaybackThread(Thread):
         self.enclosure = None
         self.p = None
         # Check if the tts shall have a ducking role set
-        if get_neon_local_config().get('tts', {}).get('pulse_duck'):
+        config = config or get_neon_audio_config()
+        if config.get('tts', {}).get('pulse_duck'):
             self.pulse_env = _TTS_ENV
         else:
             self.pulse_env = None
@@ -214,7 +219,7 @@ class TTS(metaclass=ABCMeta):
         self.enclosure = None
         random.seed()
         self.queue = Queue()
-        self.playback = PlaybackThread(self.queue)
+        self.playback = PlaybackThread(self.queue, config)
         self.playback.start()
         self.clear_cache()
         self.spellings = self.load_spellings()
@@ -287,8 +292,9 @@ class TTS(metaclass=ABCMeta):
         """
         self.bus = bus
         self.playback.init(self)
-        self.enclosure = EnclosureAPI(self.bus)
-        self.playback.enclosure = self.enclosure
+        if EnclosureAPI:
+            self.enclosure = EnclosureAPI(self.bus)
+            self.playback.enclosure = self.enclosure
 
     def get_tts(self, sentence, wav_file, request=None):
         """Abstract method that a tts implementation needs to implement.
@@ -388,14 +394,14 @@ class TTS(metaclass=ABCMeta):
         create_signal("isSpeaking")
 
         try:
-            self._execute(sentence, ident, listen, message)
+            return self._execute(sentence, ident, listen, message)
         except Exception:
             # If an error occurs end the audio sequence through an empty entry
             self.queue.put(EMPTY_PLAYBACK_QUEUE_TUPLE)
             # Re-raise to allow the Exception to be handled externally as well.
             raise
 
-    def _execute(self, sentence, ident, listen, message):
+    def _execute(self, sentence: str, ident: str, listen: bool, message: Message):
         def _get_requested_tts_languages(msg) -> list:
             """
             Builds a list of the requested TTS for a given spoken response
@@ -540,6 +546,9 @@ class TTS(metaclass=ABCMeta):
                 self.bus.emit(message.forward("klat.response", {"responses": responses,
                                                                 "speaker": message.data.get("speaker")}))
                 # self.bus.wait_for_response
+            # API Call
+            elif message.msg_type in ["neon.get_tts"]:
+                return responses
             # Non-server execution
             else:
                 if response_audio_files:
@@ -681,7 +690,7 @@ class TTSFactory:
     }
 
     @staticmethod
-    def create():
+    def create(config=None):
         """Factory method to create a TTS engine based on configuration.
 
         The configuration file ``mycroft.conf`` contains a ``tts`` section with
@@ -691,7 +700,7 @@ class TTSFactory:
             "module": <engine_name>
         }
         """
-        config = get_neon_local_config()
+        config = config or get_neon_audio_config()
         lang = config.get("language", {}).get("user") or config.get("lang", "en-us")
         tts_module = config.get('tts', {}).get('module', 'mimic')
         tts_config = config.get('tts', {}).get(tts_module, {})

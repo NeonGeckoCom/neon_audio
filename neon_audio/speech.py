@@ -42,7 +42,7 @@ from ovos_utils.log import LOG
 from ovos_utils.signal import check_for_signal
 from mycroft_bus_client import Message, MessageBusClient
 
-from neon_utils.configuration_utils import get_neon_local_config, NGIConfig
+from neon_utils.configuration_utils import get_neon_local_config, NGIConfig, get_neon_audio_config
 from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException
@@ -77,6 +77,32 @@ def handle_mute_tts(event):
 def handle_mute_status(event):
     """ emit tts mute status to bus """
     bus.emit(Message("mycroft.tts.mute_status", {"muted": speak_muted}))
+
+
+def handle_get_tts(message):
+    """
+    Handle a request to get TTS only
+    :param message: Message associated with request
+    """
+    global tts
+    text = message.data.get("text")
+    ident = message.context.get("ident") or "neon.get_tts.response"
+    if not message.data.get("speaker"):
+        LOG.warning(f"No speaker data with request, core defaults will be used.")
+    if text:
+        if not isinstance(text, str):
+            bus.emit(message.reply(ident, data={"error": f"text is not a str: {text}"}))
+            return
+        try:
+            responses = tts.execute(text, message=message)
+            # TODO: Consider including audio bytes here in case path is inaccessible DM
+            # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path}}
+            bus.emit(message.reply(ident, data=responses))
+        except Exception as e:
+            LOG.error(e)
+            bus.emit(message.reply(ident, data={"error": repr(e)}))
+    else:
+        bus.emit(message.reply(ident, data={"error": "No text provided."}))
 
 
 def handle_speak(message):
@@ -128,7 +154,7 @@ def mute_and_speak(utterance, message):
         tts.playback.stop()
         tts.playback.join()
         # Create new tts instance
-        tts = TTSFactory.create()
+        tts = TTSFactory.create(config)
         tts.init(bus)
         tts_hash = hash(str(config.get('tts', '')))
 
@@ -168,11 +194,12 @@ def handle_stop(event):
         bus.emit(Message("mycroft.stop.handled", {"by": "TTS"}))
 
 
-def init(messagebus):
+def init(messagebus, conf=None):
     """Start speech related handlers.
 
     Arguments:
         messagebus: Connection to the Mycroft messagebus
+        conf: configuration override
     """
 
     global bus
@@ -183,7 +210,7 @@ def init(messagebus):
     bus = messagebus
     # Configuration.set_config_update_handlers(bus)
     # config = Configuration.get()
-    config = NGIConfig("ngi_local_conf")
+    config = conf or get_neon_audio_config()
     bus.on('mycroft.stop', handle_stop)
     bus.on('mycroft.audio.speech.stop', handle_stop)
     bus.on('speak', handle_speak)
@@ -191,7 +218,10 @@ def init(messagebus):
     bus.on('mycroft.tts.unmute', handle_unmute_tts)
     bus.on('mycroft.tts.mute_status.request', handle_mute_status)
 
-    tts = TTSFactory.create()
+    # API Methods
+    bus.on("neon.get_tts", handle_get_tts)
+
+    tts = TTSFactory.create(config)
     tts.init(bus)
     tts_hash = hash(str(config.get('tts', '')))
 
