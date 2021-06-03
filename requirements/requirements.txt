@@ -4,4 +4,4 @@ mycroft-messagebus-client>=0.8.4
 ovos_utils~=0.0.8
 ovos_plugin_manager
 python-vlc==1.1.2
-neon-utils @ git+https://github.com/neongeckocom/neon-skill-utils
+neon-utils @ git+https://github.com/neondaniel/neon-skill-utils@FEAT_AudioConfig

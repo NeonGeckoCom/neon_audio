@@ -51,7 +51,7 @@ from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
 
 from neon_utils.language_utils import DetectorFactory, TranslatorFactory
-from neon_utils.configuration_utils import get_neon_lang_config, get_neon_local_config, NGIConfig
+from neon_utils.configuration_utils import get_neon_lang_config, get_neon_local_config, NGIConfig, get_neon_audio_config
 from neon_enclosure.enclosure.api import EnclosureAPI
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
@@ -395,7 +395,7 @@ class TTS(metaclass=ABCMeta):
             # Re-raise to allow the Exception to be handled externally as well.
             raise
 
-    def _execute(self, sentence, ident, listen, message):
+    def _execute(self, sentence: str, ident: str, listen: bool, message: Message):
         def _get_requested_tts_languages(msg) -> list:
             """
             Builds a list of the requested TTS for a given spoken response
@@ -540,6 +540,9 @@ class TTS(metaclass=ABCMeta):
                 self.bus.emit(message.forward("klat.response", {"responses": responses,
                                                                 "speaker": message.data.get("speaker")}))
                 # self.bus.wait_for_response
+            # API Call
+            elif message.msg_type in ["neon.get_tts"]:
+                return responses
             # Non-server execution
             else:
                 if response_audio_files:
@@ -681,7 +684,7 @@ class TTSFactory:
     }
 
     @staticmethod
-    def create():
+    def create(config=None):
         """Factory method to create a TTS engine based on configuration.
 
         The configuration file ``mycroft.conf`` contains a ``tts`` section with
@@ -691,7 +694,7 @@ class TTSFactory:
             "module": <engine_name>
         }
         """
-        config = get_neon_local_config()
+        config = config or get_neon_audio_config()
         lang = config.get("language", {}).get("user") or config.get("lang", "en-us")
         tts_module = config.get('tts', {}).get('module', 'mimic')
         tts_config = config.get('tts', {}).get(tts_module, {})

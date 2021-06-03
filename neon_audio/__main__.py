@@ -52,23 +52,32 @@ from mycroft.util import reset_sigint_handler, wait_for_exit_signal, \
     create_daemon, create_echo_function, check_for_signal
 
 
-def main():
-    """ Main function. Run when file is invoked. """
+def main(config: dict = None):
+    """
+     Main function. Run when file is invoked.
+     :param config: dict configuration containing keys: ['tts', 'Audio', 'language']
+    """
     reset_sigint_handler()
     check_for_signal("isSpeaking")
     bus = MessageBusClient()  # Connect to the Mycroft Messagebus
     # Configuration.set_config_update_handlers(bus)
-    speech.init(bus)
+    speech.init(bus, config)
 
     LOG.info("Starting Audio Services")
     bus.on('message', create_echo_function('AUDIO', ['mycroft.audio.service']))
-    audio = AudioService(bus)  # Connect audio service instance to message bus
+    from neon_utils.configuration_utils import get_neon_device_type
+    if get_neon_device_type() == 'server':
+        audio = None
+    else:
+        audio = AudioService(bus, config)  # Connect audio service instance to message bus
     create_daemon(bus.run_forever)
 
     wait_for_exit_signal()
 
     speech.shutdown()
-    audio.shutdown()
+
+    if audio:
+        audio.shutdown()
 
 
 if __name__ == "__main__":

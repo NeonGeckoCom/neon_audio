@@ -217,13 +217,14 @@ class AudioService:
         to be played.
     """
 
-    def __init__(self, bus):
+    def __init__(self, bus, config=None):
         """
             Args:
                 bus: Mycroft messagebus
         """
         self.bus = bus
-        self.config = get_neon_audio_config()
+        config = config or get_neon_audio_config()
+        self.config = config.get("Audio") or config
         self.service_lock = Lock()
 
         self.default = None
