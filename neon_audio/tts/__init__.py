@@ -394,7 +394,7 @@ class TTS(metaclass=ABCMeta):
         create_signal("isSpeaking")
 
         try:
-            self._execute(sentence, ident, listen, message)
+            return self._execute(sentence, ident, listen, message)
         except Exception:
             # If an error occurs end the audio sequence through an empty entry
             self.queue.put(EMPTY_PLAYBACK_QUEUE_TUPLE)
