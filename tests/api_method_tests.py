@@ -51,7 +51,7 @@ class TestAPIMethods(unittest.TestCase):
         cls.bus.run_in_thread()
         while not cls.bus.started_running:
             sleep(1)
-        sleep(15)
+        sleep(5)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -80,13 +80,14 @@ class TestAPIMethods(unittest.TestCase):
     def test_get_tts_valid_default(self):
         text = "This is a test"
         context = {"client": "tester",
-                   "ident": time(),
+                   "ident": str(time()),
                    "user": "TestRunner"}
         stt_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": text}, context),
                                               context["ident"], timeout=60)
         self.assertEqual(stt_resp.context, context)
         responses = stt_resp.data
         self.assertIsInstance(responses, dict)
+        print(responses)
         self.assertEqual(len(responses), 1)
         resp = list(responses.values())[0]
         self.assertIsInstance(resp, dict)

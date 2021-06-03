@@ -79,7 +79,7 @@ class PlaybackThread(Thread):
     viseme data to enclosure.
     """
 
-    def __init__(self, queue):
+    def __init__(self, queue, config=None):
         super(PlaybackThread, self).__init__()
         self.tts = None
         self.queue = queue
@@ -88,7 +88,8 @@ class PlaybackThread(Thread):
         self.enclosure = None
         self.p = None
         # Check if the tts shall have a ducking role set
-        if get_neon_local_config().get('tts', {}).get('pulse_duck'):
+        config = config or get_neon_audio_config()
+        if config.get('tts', {}).get('pulse_duck'):
             self.pulse_env = _TTS_ENV
         else:
             self.pulse_env = None
@@ -218,7 +219,7 @@ class TTS(metaclass=ABCMeta):
         self.enclosure = None
         random.seed()
         self.queue = Queue()
-        self.playback = PlaybackThread(self.queue)
+        self.playback = PlaybackThread(self.queue, config)
         self.playback.start()
         self.clear_cache()
         self.spellings = self.load_spellings()
