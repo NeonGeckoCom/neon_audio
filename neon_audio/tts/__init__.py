@@ -52,7 +52,6 @@ from os.path import dirname, exists, isdir, join
 
 from neon_utils.language_utils import DetectorFactory, TranslatorFactory
 from neon_utils.configuration_utils import get_neon_lang_config, get_neon_local_config, NGIConfig, get_neon_audio_config
-from neon_enclosure.enclosure.api import EnclosureAPI
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 # from ovos_utils.plugins import load_plugin
@@ -63,6 +62,11 @@ from mycroft.metrics import report_timing, Stopwatch
 from mycroft.util import (
     play_wav, play_mp3, check_for_signal, create_signal, resolve_resource_file
 )
+
+try:  # TODO: Is this necessary anymore? DM
+    from neon_enclosure.enclosure.api import EnclosureAPI
+except ImportError:
+    EnclosureAPI = None
 
 _TTS_ENV = deepcopy(os.environ)
 _TTS_ENV['PULSE_PROP'] = 'media.role=phone'
@@ -287,8 +291,9 @@ class TTS(metaclass=ABCMeta):
         """
         self.bus = bus
         self.playback.init(self)
-        self.enclosure = EnclosureAPI(self.bus)
-        self.playback.enclosure = self.enclosure
+        if EnclosureAPI:
+            self.enclosure = EnclosureAPI(self.bus)
+            self.playback.enclosure = self.enclosure
 
     def get_tts(self, sentence, wav_file, request=None):
         """Abstract method that a tts implementation needs to implement.
