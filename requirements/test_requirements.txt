@@ -1,4 +1,4 @@
-neon-tts-plugin-mozilla_remote @ git+https://github.com/NeonDaniel/neon-tts-plugin-mozilla_remote
+neon-tts-plugin-mozilla_remote @ git+https://github.com/NeonGeckoCom/neon-tts-plugin-mozilla_remote
 holmesv
 pytest
 tornado

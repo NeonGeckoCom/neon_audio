@@ -33,8 +33,7 @@ from neon_audio.__main__ import main as neon_audio_main
 
 TEST_CONFIG = get_neon_audio_config()
 TEST_CONFIG["tts"]["module"] = "mozilla_remote"
-TEST_CONFIG["tts"]["mozilla_remote"] = {"api_url": "http://64.34.186.120:5002"}
-# TODO: Also export URL for testing DM
+TEST_CONFIG["tts"]["mozilla_remote"] = {"api_url": os.environ.get("TTS_URL")}
 
 
 class TestAPIMethods(unittest.TestCase):

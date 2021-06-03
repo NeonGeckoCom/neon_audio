@@ -27,6 +27,8 @@ jobs:
       - name: Test API Methods
         run: |
           pytest tests/api_method_tests.py --doctest-modules --junitxml=tests/api-method-test-results.xml
+        env:
+          TTS_URL: ${{secrets.tts_url}}
       - name: Upload API Method test results
         uses: actions/upload-artifact@v2
         with:
