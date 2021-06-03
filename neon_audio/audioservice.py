@@ -1,45 +1,28 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
+# All trademark and other rights reserved by their respective owners
+# Copyright 2008-2021 Neongecko.com Inc.
 #
-# Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
-#
-# Notice of License - Duplicating this Notice of License near the start of any file containing
-# a derivative of this software is a condition of license for this software.
-# Friendly Licensing:
-# No charge, open source royalty free use of the Neon AI software source and object is offered for
-# educational users, noncommercial enthusiasts, Public Benefit Corporations (and LLCs) and
-# Social Purpose Corporations (and LLCs). Developers can contact developers@neon.ai
-# For commercial licensing, distribution of derivative works or redistribution please contact licenses@neon.ai
-# Distributed on an "AS IS” basis without warranties or conditions of any kind, either express or implied.
-# Trademarks of Neongecko: Neon AI(TM), Neon Assist (TM), Neon Communicator(TM), Klat(TM)
-# Authors: Guy Daniels, Daniel McKnight, Regina Bloomstine, Elon Gasper, Richard Leeds
-#
-# Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
-# US Patents 2008-2021: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
-# China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
-#
-# This software is an enhanced derivation of the Mycroft Project which is licensed under the
-# Apache software Foundation software license 2.0 https://www.apache.org/licenses/LICENSE-2.0
-# Changes Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
-#
-# Copyright 2017 Mycroft AI Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+# following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice, this list of conditions
+#    and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions
+#    and the following disclaimer in the documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+#    products derived from this software without specific prior written permission.
 
-import importlib
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+# USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import sys
 import time
-from os import listdir
-from os.path import abspath, dirname, basename, isdir, join
+
+from os.path import abspath, dirname
 from threading import Lock, Event
 from mycroft_bus_client import Message
 from neon_utils.configuration_utils import get_neon_audio_config
@@ -48,128 +31,14 @@ from ovos_plugin_manager import find_plugins
 
 from neon_audio.services import RemoteAudioBackend
 
-# from mycroft.util.monotonic_event import MonotonicEvent
+from mycroft.audio.audioservice import create_service_spec, get_services, setup_service, load_internal_services,\
+    load_services
+
 
 MINUTES = 60  # Seconds in a minute
 
 MAINMODULE = '__init__'
 sys.path.append(abspath(dirname(__file__)))
-
-
-def create_service_spec(service_folder):
-    """Prepares a descriptor that can be used together with imp.
-
-        Args:
-            service_folder: folder that shall be imported.
-
-        Returns:
-            Dict with import information
-    """
-    module_name = 'audioservice_' + basename(service_folder)
-    path = join(service_folder, MAINMODULE + '.py')
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    mod = importlib.util.module_from_spec(spec)
-    info = {'spec': spec, 'mod': mod, 'module_name': module_name}
-    return {"name": basename(service_folder), "info": info}
-
-
-def get_services(services_folder):
-    """
-        Load and initialize services from all subfolders.
-
-        Args:
-            services_folder: base folder to look for services in.
-
-        Returns:
-            Sorted list of audio services.
-    """
-    LOG.info("Loading services from " + services_folder)
-    services = []
-    possible_services = listdir(services_folder)
-    for i in possible_services:
-        location = join(services_folder, i)
-        if (isdir(location) and
-                not MAINMODULE + ".py" in listdir(location)):
-            for j in listdir(location):
-                name = join(location, j)
-                if (not isdir(name) or
-                        not MAINMODULE + ".py" in listdir(name)):
-                    continue
-                try:
-                    services.append(create_service_spec(name))
-                except Exception as e:
-                    LOG.error(e)
-                    LOG.error('Failed to create service from ' + name,
-                              exc_info=True)
-        if (not isdir(location) or
-                not MAINMODULE + ".py" in listdir(location)):
-            continue
-        try:
-            services.append(create_service_spec(location))
-        except Exception as e:
-            LOG.error(e)
-            LOG.error('Failed to create service from ' + location,
-                      exc_info=True)
-    return sorted(services, key=lambda p: p.get('name'))
-
-
-def setup_service(service_module, config, bus):
-    """Run the appropriate setup function and return created service objects.
-
-    Arguments:
-        service_module: Python module to run
-        config (dict): Mycroft configuration dict
-        bus (MessageBusClient): Messagebus interface
-    Returns:
-        (list) List of created services.
-    """
-    if (hasattr(service_module, 'autodetect') and
-            callable(service_module.autodetect)):
-        try:
-            return service_module.autodetect(config, bus)
-        except Exception as e:
-            LOG.error('Failed to autodetect. ' + repr(e))
-    elif hasattr(service_module, 'load_service'):
-        try:
-            return service_module.load_service(config, bus)
-        except Exception as e:
-            LOG.error('Failed to load service. ' + repr(e))
-    else:
-        return None
-
-
-def load_internal_services(config, bus, path=None):
-    """Load audio services included in Mycroft-core.
-
-    Arguments:
-        config: configuration dict for the audio backends.
-        bus: Mycroft messagebus
-        path: (default None) optional path for builtin audio service
-              implementations
-    Returns:
-        List of started services
-    """
-    if path is None:
-        path = dirname(abspath(__file__)) + '/services/'
-    service_directories = get_services(path)
-    service = []
-    for descriptor in service_directories:
-        LOG.info('Loading ' + descriptor['name'])
-        try:
-            service_module = descriptor['info']['mod']
-            spec = descriptor['info']['spec']
-            module_name = descriptor['info']['module_name']
-            sys.modules[module_name] = service_module
-            spec.loader.exec_module(service_module)
-        except Exception as e:
-            LOG.error('Failed to import module ' + descriptor['name'] + '\n' +
-                      repr(e))
-        else:
-            s = setup_service(service_module, config, bus)
-            if s:
-                service += s
-
-    return service
 
 
 def load_plugins(config, bus):
@@ -189,26 +58,6 @@ def load_plugins(config, bus):
         if service:
             plugin_services += service
     return plugin_services
-
-
-def load_services(config, bus, path=None):
-    """Load builtin services as well as service plugins
-
-    The builtin service folder is scanned (or a folder indicated by the path
-    parameter) for services and plugins registered with the
-    "mycroft.plugin.audioservice" entrypoint group.
-
-    Arguments:
-        config: configuration dict for the audio backends.
-        bus: Mycroft messagebus
-        path: (default None) optional path for builtin audio service
-              implementations
-
-    Returns:
-        List of started services.
-    """
-    return (load_internal_services(config, bus, path) +
-            load_plugins(config, bus))
 
 
 class AudioService:
