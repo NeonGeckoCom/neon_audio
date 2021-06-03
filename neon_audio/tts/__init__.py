@@ -35,7 +35,7 @@ from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
 
 from neon_utils.language_utils import DetectorFactory, TranslatorFactory
-from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_audio_config
+from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_audio_config, get_neon_user_config
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 # from ovos_utils.plugins import load_plugin
@@ -425,7 +425,7 @@ class TTS(metaclass=ABCMeta):
 
                 # General non-server response, use yml configuration
                 else:
-                    user_config = NGIConfig("ngi_user_info")["speech"]  # TODO: Consider using get_neon_user_config DM
+                    user_config = get_neon_user_config()["speech"]
 
                     tts_reqs.append({"speaker": tts_name,
                                      "language": user_config["tts_language"],
