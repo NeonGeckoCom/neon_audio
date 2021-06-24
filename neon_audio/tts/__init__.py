@@ -410,11 +410,13 @@ class TTS(metaclass=ABCMeta):
 
                 # If multiple profiles attached to message, get TTS for all of them
                 elif profiles:
+                    LOG.info(f"Got profiles: {profiles}")
                     for nickname in profiles:
                         chat_user = profiles.get(nickname, None)
-                        language = chat_user.get('tts_language', 'en-us')
-                        gender = chat_user.get('tts_gender', 'female')
-                        LOG.debug('>>> 0.6 nickname = ' + nickname)
+                        user_lang = chat_user.get("speech", chat_user)
+                        language = user_lang.get('tts_language', 'en-us')
+                        gender = user_lang.get('tts_gender', 'female')
+                        LOG.debug(f"{nickname} requesting {gender} {language}")
                         data = {"speaker": tts_name,
                                 "language": language,
                                 "gender": gender,
