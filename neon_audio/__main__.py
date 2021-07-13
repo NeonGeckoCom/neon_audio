@@ -19,40 +19,69 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from mycroft_bus_client import MessageBusClient
 from neon_utils.logger import LOG
 
 from neon_audio import speech
 from neon_audio.audioservice import AudioService
 
+from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap, start_message_bus_client
 from mycroft.util import reset_sigint_handler, wait_for_exit_signal, \
-    create_daemon, create_echo_function, check_for_signal
+    create_echo_function, check_for_signal
 
 
-def main(config: dict = None):
+def on_ready():
+    LOG.info('Audio service is ready.')
+
+
+def on_error(e='Unknown'):
+    LOG.error('Audio service failed to launch ({}).'.format(repr(e)))
+
+
+def on_stopping():
+    LOG.info('Audio service is shutting down...')
+
+
+def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, config: dict = None):
     """
      Main function. Run when file is invoked.
+     :param ready_hook:
+     :param error_hook:
+     :param stopping_hook:
      :param config: dict configuration containing keys: ['tts', 'Audio', 'language']
     """
     reset_sigint_handler()
     check_for_signal("isSpeaking")
-    bus = MessageBusClient()  # Connect to the Mycroft Messagebus
+    whitelist = ['mycroft.audio.service']
+    bus = start_message_bus_client("AUDIO", whitelist=whitelist)
+    callbacks = StatusCallbackMap(on_ready=ready_hook, on_error=error_hook,
+                                  on_stopping=stopping_hook)
+    status = ProcessStatus('audio', bus, callbacks)
+    try:
+        speech.init(bus, config)
 
-    speech.init(bus, config)
+        LOG.info("Starting Audio Services")
+        bus.on('message', create_echo_function('AUDIO', ['mycroft.audio.service']))
+        from neon_utils.configuration_utils import get_neon_device_type
+        if get_neon_device_type() == 'server':
+            audio = None
+        else:
+            audio = AudioService(bus, config)  # Connect audio service instance to message bus
 
-    LOG.info("Starting Audio Services")
-    bus.on('message', create_echo_function('AUDIO', ['mycroft.audio.service']))
-    from neon_utils.configuration_utils import get_neon_device_type
-    if get_neon_device_type() == 'server':
+        status.set_started()
+    except Exception as e:
+        LOG.error(e)
+        status.set_error(e)
         audio = None
     else:
-        audio = AudioService(bus, config)  # Connect audio service instance to message bus
-    create_daemon(bus.run_forever)
-
-    wait_for_exit_signal()
+        if audio.wait_for_load() and len(audio.service) > 0:
+            # If at least one service exists, report ready
+            status.set_ready()
+            wait_for_exit_signal()
+            status.set_stopping()
+        else:
+            status.set_error('No audio services loaded')
 
     speech.shutdown()
-
     if audio:
         audio.shutdown()
 
