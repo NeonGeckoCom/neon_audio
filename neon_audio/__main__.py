@@ -19,14 +19,14 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
 
 from neon_audio import speech
 from neon_audio.audioservice import AudioService
 
 from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap, start_message_bus_client
-from mycroft.util import reset_sigint_handler, wait_for_exit_signal, \
-    create_echo_function, check_for_signal
+from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
 
 
 def on_ready():
@@ -58,10 +58,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
     status = ProcessStatus('audio', bus, callbacks)
     try:
         speech.init(bus, config)
-
-        LOG.info("Starting Audio Services")
-        bus.on('message', create_echo_function('AUDIO', ['mycroft.audio.service']))
-        from neon_utils.configuration_utils import get_neon_device_type
+        # Connect audio service instance to message bus
         if get_neon_device_type() == 'server':
             audio = None
         else:
@@ -71,7 +68,6 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
     except Exception as e:
         LOG.error(e)
         status.set_error(e)
-        audio = None
     else:
         if audio.wait_for_load() and len(audio.service) > 0:
             # If at least one service exists, report ready
@@ -81,10 +77,10 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
         else:
             status.set_error('No audio services loaded')
 
-    speech.shutdown()
-    if audio:
-        audio.shutdown()
+        speech.shutdown()
+        if audio:
+            audio.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

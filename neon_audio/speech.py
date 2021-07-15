@@ -26,7 +26,7 @@ from ovos_utils.log import LOG
 from ovos_utils.signal import check_for_signal
 from mycroft_bus_client import Message, MessageBusClient
 
-from neon_utils.configuration_utils import get_neon_local_config, NGIConfig, get_neon_audio_config
+from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
 from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException
@@ -42,25 +42,6 @@ lock = Lock()
 speak_muted = False
 
 _last_stop_signal = 0
-
-
-def handle_unmute_tts(event):
-    """ enable tts execution """
-    global speak_muted
-    speak_muted = False
-    bus.emit(Message("mycroft.tts.mute_status", {"muted": speak_muted}))
-
-
-def handle_mute_tts(event):
-    """ disable tts execution """
-    global speak_muted
-    speak_muted = True
-    bus.emit(Message("mycroft.tts.mute_status", {"muted": speak_muted}))
-
-
-def handle_mute_status(event):
-    """ emit tts mute status to bus """
-    bus.emit(Message("mycroft.tts.mute_status", {"muted": speak_muted}))
 
 
 def handle_get_tts(message):
@@ -97,12 +78,14 @@ def handle_speak(message):
     # Configuration.set_config_update_handlers(bus)
     global _last_stop_signal
 
-    message.context = message.context or {}
-
     # if the message is targeted and audio is not the target don't
     # don't synthezise speech
-    # if 'audio' not in event.context.get('destination', ['audio']):
-    #     return
+    message.context = message.context or {}
+    if message.context.get('destination') and not \
+            ('debug_cli' in message.context['destination'] or
+             'audio' in message.context['destination']):
+        LOG.warning("speak message not targeted at audio module")
+        # return
 
     # Get conversation ID
     message.context['ident'] = message.context.get("ident", "unknown")
@@ -151,22 +134,35 @@ def mute_and_speak(utterance, message):
         LOG.error('TTS execution failed ({})'.format(repr(e)))
 
 
-def mimic_fallback_tts(utterance, ident, event=None):
+def _get_mimic_fallback():
+    """Lazily initializes the fallback TTS if needed."""
     global mimic_fallback_obj
-    # TODO: This could also be Mozilla TTS DM
-    # fallback if connection is lost
-    mimic_config = get_neon_local_config()
-    tts_config = mimic_config.get('tts', {}).get("mimic", {})
-    lang = mimic_config.get("lang", "en-us")
     if not mimic_fallback_obj:
-        mimic_fallback_obj = Mimic(lang, tts_config)
-    mimic_tts = mimic_fallback_obj
+        config = get_neon_audio_config()
+        tts_config = config.get('tts', {}).get("mimic", {})
+        lang = config.get("lang", "en-us")
+        tts = Mimic(lang, tts_config)
+        tts.validator.validate()
+        tts.init(bus)
+        mimic_fallback_obj = tts
+
+    return mimic_fallback_obj
+
+
+def mimic_fallback_tts(utterance, ident, listen):
+    """Speak utterance using fallback TTS if connection is lost.
+
+    Args:
+        utterance (str): sentence to speak
+        ident (str): interaction id for metrics
+        listen (bool): True if interaction should end with mycroft listening
+    """
+    fallback_tts = _get_mimic_fallback()
     LOG.debug("Mimic fallback, utterance : " + str(utterance))
-    mimic_tts.init(bus)
-    mimic_tts.execute(utterance, ident)
+    fallback_tts.execute(utterance, ident, listen)
 
 
-def handle_stop(event):
+def handle_stop(_):
     """Handle stop message.
 
     Shutdown any speech.
@@ -198,9 +194,6 @@ def init(messagebus, conf=None):
     bus.on('mycroft.stop', handle_stop)
     bus.on('mycroft.audio.speech.stop', handle_stop)
     bus.on('speak', handle_speak)
-    bus.on('mycroft.tts.mute', handle_mute_tts)
-    bus.on('mycroft.tts.unmute', handle_unmute_tts)
-    bus.on('mycroft.tts.mute_status.request', handle_mute_status)
 
     # API Methods
     bus.on("neon.get_tts", handle_get_tts)
