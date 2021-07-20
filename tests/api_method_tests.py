@@ -53,7 +53,7 @@ class TestAPIMethods(unittest.TestCase):
         cls.bus.run_in_thread()
         while not cls.bus.started_running:
             sleep(1)
-        sleep(5)
+        sleep(30)
 
     @classmethod
     def tearDownClass(cls) -> None:
