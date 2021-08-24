@@ -55,7 +55,9 @@ with open("./version.py", "r", encoding="utf-8") as v:
 setup(
     name='neon-audio',
     version=version,
-    description=long_description,
+    description="Neon Audio Module",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/NeonGeckoCom/neon_audio',
     author='Neongecko',
     author_email='developers@neon.ai',
@@ -65,7 +67,7 @@ setup(
     zip_safe=True,
     classifiers=[
         'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3',
     ],
     entry_points={
         'console_scripts': [
