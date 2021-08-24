@@ -23,7 +23,8 @@ import sys
 import time
 
 from os.path import abspath, dirname
-from threading import Lock, Event
+from threading import Lock
+
 from mycroft_bus_client import Message
 from neon_utils.configuration_utils import get_neon_audio_config
 from neon_utils.logger import LOG
@@ -31,8 +32,8 @@ from ovos_plugin_manager import find_plugins
 
 from neon_audio.services import RemoteAudioBackend
 
-from mycroft.audio.audioservice import create_service_spec, get_services, setup_service, load_internal_services,\
-    load_services
+from mycroft.util.monotonic_event import MonotonicEvent
+from mycroft.audio.audioservice import setup_service, load_services
 
 
 MINUTES = 60  # Seconds in a minute
@@ -82,14 +83,14 @@ class AudioService:
         self.play_start_time = 0
         self.volume_is_low = False
 
-        self._loaded = Event()
-        bus.once('open', self.load_services_callback)
+        self._loaded = MonotonicEvent()
+        self.load_services()
 
-    def load_services_callback(self):
-        """
-            Main callback function for loading services. Sets up the globals
-            service and default and registers the event handlers for the
-            subsystem.
+    def load_services(self):
+        """Method for loading services.
+
+        Sets up the global service, default and registers the event handlers
+        for the subsystem.
         """
         services = load_services(self.config, self.bus)
         # Sort services so local services are checked first
@@ -158,101 +159,79 @@ class AudioService:
             LOG.debug('End of playlist!')
             self.bus.emit(Message('mycroft.audio.queue_end'))
 
-    def _pause(self, message=None):
+    def _pause(self, _=None):
         """
             Handler for mycroft.audio.service.pause. Pauses the current audio
             service.
-
-            Args:
-                message: message bus message, not used but required
         """
         if self.current:
             self.current.pause()
 
-    def _resume(self, message=None):
+    def _resume(self, _=None):
         """
             Handler for mycroft.audio.service.resume.
-
-            Args:
-                message: message bus message, not used but required
         """
         if self.current:
             self.current.resume()
 
-    def _next(self, message=None):
+    def _next(self, _=None):
         """
             Handler for mycroft.audio.service.next. Skips current track and
             starts playing the next.
-
-            Args:
-                message: message bus message, not used but required
         """
         if self.current:
             self.current.next()
 
-    def _prev(self, message=None):
+    def _prev(self, _=None):
         """
             Handler for mycroft.audio.service.prev. Starts playing the previous
             track.
-
-            Args:
-                message: message bus message, not used but required
         """
         if self.current:
             self.current.previous()
 
-    def _stop(self, message=None):
+    def _perform_stop(self):
+        """Stop audioservice if active."""
+        if self.current:
+            name = self.current.name
+            if self.current.stop():
+                self.bus.emit(Message("mycroft.stop.handled",
+                                      {"by": "audio:" + name}))
+
+        self.current = None
+
+    def _stop(self, _=None):
         """
             Handler for mycroft.stop. Stops any playing service.
-
-            Args:
-                message: message bus message, not used but required
         """
         if time.monotonic() - self.play_start_time > 1:
             LOG.debug('stopping all playing services')
             with self.service_lock:
-                if self.current:
-                    name = self.current.name
-                    if self.current.stop():
-                        self.bus.emit(Message("mycroft.stop.handled",
-                                              {"by": "audio:" + name}))
+                self._perform_stop()
+        LOG.info('END Stop')
 
-                    self.current = None
-
-    def _lower_volume(self, message=None):
+    def _lower_volume(self, _=None):
         """
             Is triggered when mycroft starts to speak and reduces the volume.
-
-            Args:
-                message: message bus message, not used but required
         """
         if self.current:
             LOG.debug('lowering volume')
             self.current.lower_volume()
             self.volume_is_low = True
 
-    def _restore_volume(self, message=None):
-        """
-            Is triggered when mycroft is done speaking and restores the volume
-
-            Args:
-                message: message bus message, not used but required
-        """
-        if self.current:
+    def _restore_volume(self, _=None):
+        """Triggered when mycroft is done speaking and restores the volume."""
+        current = self.current
+        if current:
             LOG.debug('restoring volume')
             self.volume_is_low = False
-            time.sleep(2)
-            if not self.volume_is_low:
-                self.current.restore_volume()
+            current.restore_volume()
 
-    def _restore_volume_after_record(self, message=None):
+    def _restore_volume_after_record(self, _=None):
         """
             Restores the volume when Mycroft is done recording.
             If no utterance detected, restore immediately.
             If no response is made in reasonable time, then also restore.
-
-            Args:
-                message: message bus message, not used but required
         """
         def restore_volume():
             LOG.debug('restoring volume')
@@ -281,7 +260,7 @@ class AudioService:
                 prefered_service: indecates the service the user prefer to play
                                   the tracks.
         """
-        self._stop()
+        self._perform_stop()
 
         if isinstance(tracks[0], str):
             uri_type = tracks[0].split(':')[0]
@@ -315,8 +294,9 @@ class AudioService:
 
     def _queue(self, message):
         if self.current:
-            tracks = message.data['tracks']
-            self.current.add_list(tracks)
+            with self.service_lock:
+                tracks = message.data['tracks']
+                self.current.add_list(tracks)
         else:
             self._play(message)
 
@@ -329,25 +309,24 @@ class AudioService:
             Args:
                 message: message bus message, not used but required
         """
-        tracks = message.data['tracks']
-        repeat = message.data.get('repeat', False)
-        # Find if the user wants to use a specific backend
-        for s in self.service:
-            if ('utterance' in message.data and
-                    s.name in message.data['utterance']):
-                prefered_service = s
-                LOG.debug(s.name + ' would be prefered')
-                break
-        else:
-            prefered_service = None
-        self.play(tracks, prefered_service, repeat)
+        with self.service_lock:
+            tracks = message.data['tracks']
+            repeat = message.data.get('repeat', False)
+            # Find if the user wants to use a specific backend
+            for s in self.service:
+                if ('utterance' in message.data and
+                        s.name in message.data['utterance']):
+                    prefered_service = s
+                    LOG.debug(s.name + ' would be prefered')
+                    break
+            else:
+                prefered_service = None
+            self.play(tracks, prefered_service, repeat)
+            time.sleep(0.5)
 
-    def _track_info(self, message):
+    def _track_info(self, _):
         """
             Returns track info on the message bus.
-
-            Args:
-                message: message bus message, not used but required
         """
         if self.current:
             track_info = self.current.track_info()

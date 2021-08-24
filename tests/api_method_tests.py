@@ -46,14 +46,14 @@ class TestAPIMethods(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.bus_thread = Process(target=messagebus_service, daemon=False)
-        cls.audio_thread = Process(target=neon_audio_main, args=(TEST_CONFIG,), daemon=False)
+        cls.audio_thread = Process(target=neon_audio_main, kwargs={"config": TEST_CONFIG}, daemon=False)
         cls.bus_thread.start()
         cls.audio_thread.start()
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
         while not cls.bus.started_running:
             sleep(1)
-        sleep(5)
+        sleep(30)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -65,29 +65,29 @@ class TestAPIMethods(unittest.TestCase):
         context = {"client": "tester",
                    "ident": "123",
                    "user": "TestRunner"}
-        stt_resp = self.bus.wait_for_response(Message("neon.get_tts", {}, context), context["ident"])
-        self.assertEqual(stt_resp.context, context)
-        self.assertIsInstance(stt_resp.data.get("error"), str)
-        self.assertEqual(stt_resp.data["error"], "No text provided.")
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {}, context), context["ident"])
+        self.assertEqual(tts_resp.context, context)
+        self.assertIsInstance(tts_resp.data.get("error"), str)
+        self.assertEqual(tts_resp.data["error"], "No text provided.")
 
     def test_get_tts_invalid_type(self):
         context = {"client": "tester",
                    "ident": "1234",
                    "user": "TestRunner"}
-        stt_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": 123}, context),
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": 123}, context),
                                               context["ident"], timeout=60)
-        self.assertEqual(stt_resp.context, context)
-        self.assertTrue(stt_resp.data.get("error").startswith("text is not a str:"))
+        self.assertEqual(tts_resp.context, context)
+        self.assertTrue(tts_resp.data.get("error").startswith("text is not a str:"))
 
     def test_get_tts_valid_default(self):
         text = "This is a test"
         context = {"client": "tester",
                    "ident": str(time()),
                    "user": "TestRunner"}
-        stt_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": text}, context),
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": text}, context),
                                               context["ident"], timeout=60)
-        self.assertEqual(stt_resp.context, context)
-        responses = stt_resp.data
+        self.assertEqual(tts_resp.context, context)
+        responses = tts_resp.data
         self.assertIsInstance(responses, dict)
         print(responses)
         self.assertEqual(len(responses), 1)
