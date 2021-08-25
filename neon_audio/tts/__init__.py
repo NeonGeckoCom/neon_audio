@@ -445,6 +445,12 @@ class TTS(metaclass=ABCMeta):
             except Exception as x:
                 LOG.error(x)
 
+            if not tts_reqs:
+                tts_reqs = [{"speaker": "Neon",
+                             "language": "en-us",
+                             "gender": "female"
+                             }]
+
             # TODO: Associate voice with cache here somehow? (would be a per-TTS engine set) DM
             LOG.debug(f"Got {len(tts_reqs)} TTS Voice Requests")
             return tts_reqs
