@@ -518,7 +518,7 @@ class TTS(metaclass=ABCMeta):
                         file, phonemes = self.get_tts(translated_sentence, file, request)
                         # Update cache for next time
                         self.cached_translations[f"{lang}{key}"] = translated_sentence
-                        LOG.debug(">>>Cache Updated!<<<")
+                        LOG.debug(f">>>Cache Updated! ({file})<<<")
                         _update_pickle()
                 except Exception as e:
                     # Remove audio file if any exception occurs, this forces re-translation/cache next time

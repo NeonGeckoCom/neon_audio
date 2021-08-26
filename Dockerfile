@@ -13,12 +13,14 @@ RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key
   pip install \
     wheel \
     . \
-    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_local
+    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_local \
+    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_remote
 
 RUN useradd -ms /bin/bash neon
 USER neon
 
-COPY asoundrc /home/neon/.asoundrc
+COPY docker_overlay/asoundrc /home/neon/.asoundrc
+COPY docker_overlay/mycroft.conf /home/neon/.mycroft/mycroft.conf
 
 RUN mkdir -p /home/neon/.config/pulse && \
   pip install \
