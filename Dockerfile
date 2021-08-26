@@ -14,7 +14,8 @@ RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key
     wheel \
     . \
     git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_local \
-    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_remote
+    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_remote \
+    git+https://github.com/neongeckocom/neon-tts-plugin-polly
 
 RUN useradd -ms /bin/bash neon
 USER neon
