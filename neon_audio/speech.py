@@ -26,6 +26,8 @@ from ovos_utils.log import LOG
 from ovos_utils.signal import check_for_signal
 from mycroft_bus_client import Message, MessageBusClient
 
+import librosa
+
 from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
 from neon_audio.tts import TTSFactory, TTS
 
@@ -60,7 +62,25 @@ def handle_get_tts(message):
             return
         try:
             responses = tts.execute(text, message=message)
-            # TODO: Consider including audio bytes here in case path is inaccessible DM
+
+            # TODO: unit testing for this code chunk (Kirill)
+            supported_audio_formats = ['mp3']
+            if message.data.get('return_inline'):
+                for lang in list(responses):
+                    for gender in ('male', 'female'):
+                        audio_format = responses[lang].get(gender, '').split('.')[-1]
+                        if audio_format in supported_audio_formats:
+                            data, sample_rate = librosa.load(responses[lang][gender])
+                            responses[lang][gender] = dict(sample_rate=sample_rate,
+                                                           data=data,
+                                                           audio_format=audio_format)
+            """ 
+                In order to decode data with sample rate use: "soundfile" 
+                Example:
+                ```
+                   soundfile.write('example_track.mp3', data, sample_rate) 
+                ```
+            """
             # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path}}
             bus.emit(message.reply(ident, data=responses))
         except Exception as e:
