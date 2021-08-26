@@ -114,7 +114,7 @@ class TestAPIMethods(unittest.TestCase):
         resp = list(responses.values())[0]
         self.assertIsInstance(resp, dict)
         self.assertEqual(resp.get("sentence"), text)
-
+        self.assertTrue(any([isinstance(resp.get(gender, None), dict) for gender in ('male', 'female')]))
 
     # TODO: Test with multiple languages
     def test_get_tts_valid_speaker(self):

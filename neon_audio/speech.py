@@ -81,7 +81,7 @@ def handle_get_tts(message):
                    soundfile.write('example_track.mp3', data, sample_rate) 
                 ```
             """
-            # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path}}
+            # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path]}}
             bus.emit(message.reply(ident, data=responses))
         except Exception as e:
             LOG.error(e)
