@@ -99,6 +99,23 @@ class TestAPIMethods(unittest.TestCase):
         self.assertIsInstance(resp, dict)
         self.assertEqual(resp.get("sentence"), text)
 
+    def test_get_tts_inline(self):
+        text = "This is a test"
+        context = {"client": "tester",
+                   "ident": str(time()),
+                   "user": "TestRunner"}
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": text,
+                                                                       'return_inline': True}, context),
+                                              context["ident"], timeout=60)
+        self.assertEqual(tts_resp.context, context)
+        responses = tts_resp.data
+        self.assertIsInstance(responses, dict)
+        self.assertEqual(len(responses), 1)
+        resp = list(responses.values())[0]
+        self.assertIsInstance(resp, dict)
+        self.assertEqual(resp.get("sentence"), text)
+
+
     # TODO: Test with multiple languages
     def test_get_tts_valid_speaker(self):
         pass

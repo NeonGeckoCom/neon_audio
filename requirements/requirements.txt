@@ -6,3 +6,4 @@ phoneme-guesser~=0.1
 ovos_plugin_manager
 python-vlc==1.1.2
 neon-utils>=0.5.7
+librosa~=0.8
