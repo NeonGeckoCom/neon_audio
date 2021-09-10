@@ -1,5 +1,8 @@
 FROM python:3.8
 
+LABEL vendor=neon.ai \
+    ai.neon.name="neon-audio"
+
 ADD . /neon_audio
 WORKDIR /neon_audio
 
@@ -24,10 +27,12 @@ COPY docker_overlay/asoundrc /home/neon/.asoundrc
 COPY docker_overlay/mycroft.conf /home/neon/.mycroft/mycroft.conf
 
 RUN mkdir -p /home/neon/.config/pulse && \
-  pip install \
-    pychromecast==3.2.2 \
-    python-vlc==1.1.2 \
-    git+https://github.com/JarbasAl/py_mplayer.git && \
-  rm -rf ~/.cache
+    mkdir -p /home/neon/.config/neon && \
+    mkdir -p /home/neon/.local/share/neon && \
+    pip install \
+        pychromecast==3.2.2 \
+        python-vlc==1.1.2 \
+        git+https://github.com/JarbasAl/py_mplayer.git && \
+    rm -rf ~/.cache
 
 CMD ["neon_audio_client"]
