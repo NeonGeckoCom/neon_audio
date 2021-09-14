@@ -21,8 +21,8 @@ jobs:
         run: |
           sudo apt install portaudio19-dev python3-pyaudio
           python -m pip install --upgrade pip
-          pip install -r requirements/requirements.txt
-          pip install -r requirements/test_requirements.txt
+          pip install -r requirements/requirements.txt --use-deprecated=legacy-resolver
+          pip install -r requirements/test_requirements.txt --use-deprecated=legacy-resolver
 
       - name: Test API Methods
         run: |
