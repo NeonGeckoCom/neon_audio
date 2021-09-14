@@ -1,5 +1,4 @@
 neon-tts-plugin-mozilla_remote @ git+https://github.com/NeonGeckoCom/neon-tts-plugin-mozilla_remote
 holmesv[bus]
 pytest
-tornado
 mock~=4.0
