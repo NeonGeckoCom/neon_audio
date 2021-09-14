@@ -56,10 +56,7 @@ class TestAPIMethods(unittest.TestCase):
         while not alive:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
             if message:
-                print(message)
                 alive = message.data.get("status")
-            else:
-                print("No response!")
 
     @classmethod
     def tearDownClass(cls) -> None:
