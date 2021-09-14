@@ -52,13 +52,14 @@ class TestAPIMethods(unittest.TestCase):
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
         cls.bus.connected_event.wait(30)
-        if not cls.bus.connected_event.is_set():
-            print("!!!Bus not connected!!!")
         alive = False
         while not alive:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
             if message:
+                print(message)
                 alive = message.data.get("status")
+            else:
+                print("No response!")
 
     @classmethod
     def tearDownClass(cls) -> None:
