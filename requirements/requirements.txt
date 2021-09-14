@@ -5,6 +5,3 @@ phoneme-guesser~=0.1
 ovos-plugin-manager==0.0.1a3
 python-vlc==1.1.2
 neon-utils>=0.5.7
-
-# Patching dependency conflicts
-numpy~=1.19.5
