@@ -44,9 +44,9 @@ def on_stopping():
 def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, config: dict = None):
     """
      Main function. Run when file is invoked.
-     :param ready_hook:
-     :param error_hook:
-     :param stopping_hook:
+     :param ready_hook: Optional function to call when service is ready
+     :param error_hook: Optional function to call when service encounters an error
+     :param stopping_hook: Optional function to call when service is stopping
      :param config: dict configuration containing keys: ['tts', 'Audio', 'language']
     """
     reset_sigint_handler()
@@ -69,7 +69,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
         LOG.error(e)
         status.set_error(e)
     else:
-        if audio.wait_for_load() and len(audio.service) > 0:
+        if audio and audio.wait_for_load() and len(audio.service) > 0:
             # If at least one service exists, report ready
             status.set_ready()
             wait_for_exit_signal()
