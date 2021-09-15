@@ -51,8 +51,7 @@ class TestAPIMethods(unittest.TestCase):
         cls.audio_thread.start()
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
-        while not cls.bus.started_running:
-            sleep(1)
+        cls.bus.connected_event.wait(30)
         alive = False
         while not alive:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
