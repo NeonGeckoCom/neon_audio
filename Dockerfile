@@ -12,13 +12,18 @@ RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key
   echo "deb http://forslund.github.io/mycroft-desktop-repo bionic main" \
   > /etc/apt/sources.list.d/mycroft-mimic.list && \
   apt-get update && \
-  apt-get install -y alsa-utils libasound2-plugins pulseaudio-utils mimic sox && \
+  apt-get install -y alsa-utils libasound2-plugins pulseaudio-utils mimic sox vlc && \
+  pip install wheel && \
   pip install \
-    wheel \
-    . \
-    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_local \
-    git+https://github.com/neongeckocom/neon-tts-plugin-mozilla_remote \
-    git+https://github.com/neongeckocom/neon-tts-plugin-polly
+    neon-tts-plugin-mozilla_local==0.1.1a0 \
+    neon-tts-plugin-mozilla_remote \
+    neon-tts-plugin-polly \
+    neon-utils==0.7.3a7 \
+    soundfile~=0.10.3 \
+    numba==0.53 \
+    librosa==0.8.0 \
+    numpy==1.19.5 \
+    .
 
 RUN useradd -ms /bin/bash neon
 USER neon

@@ -1,4 +1,3 @@
-neon-tts-plugin-mozilla_remote @ git+https://github.com/NeonGeckoCom/neon-tts-plugin-mozilla_remote
-holmesv[bus]~=2021.8.30a1
+neon-tts-plugin-mozilla-remote
 pytest
 mock~=4.0
