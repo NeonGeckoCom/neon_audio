@@ -11,7 +11,7 @@ and optionally returns the audio or plays it back locally.
 * Arbitrary configuration supported by passing at module init
 
 ## Compatibility
-Mycroft TTS plugins are compatible with `neon-audio`.
+Mycroft TTS plugins are compatible with `neon-speech`.
 
 ## Running in Docker
 The included `Dockerfile` may be used to build a docker container for the neon_audio module. The below command may be used
@@ -20,7 +20,6 @@ to start the container.
 ```shell
 docker run -d \
 --network=host \
---name=neon_audio \
 -v ${NEON_DATA_DIR}:/home/neon/.local/share/neon:rw \
 -v ${NEON_CONFIG_DIR}:/home/neon/.config/neon:rw \
 -v ~/.config/pulse/cookie:/home/neon/.config/pulse/cookie:ro \
@@ -31,5 +30,5 @@ docker run -d \
 neon_audio
 ```
 
->*Note:* The above example assumes Docker data locations are specified in the `NEON_DATA_DIR` and `NEON_CONFIG_DIR`
-> environment variables.
+>*Note:* The above example assumes Docker data is stored in the standard user locations `~/.local/share` and `~/.config`.
+> You may want to change these values to some other path to separate container and host system data.
