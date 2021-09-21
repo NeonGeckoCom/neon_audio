@@ -15,14 +15,13 @@ RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key
   apt-get install -y alsa-utils libasound2-plugins pulseaudio-utils mimic sox vlc && \
   pip install wheel && \
   pip install \
-    neon-tts-plugin-mozilla_local==0.1.1a0 \
+    neon-tts-plugin-mozilla_local \
     neon-tts-plugin-mozilla_remote \
     neon-tts-plugin-polly \
-    neon-utils==0.7.3a7 \
-    soundfile~=0.10.3 \
+    holmesV \
     numba==0.53 \
-    librosa==0.8.0 \
-    numpy==1.19.5 \
+    py-mplayer==0.1 \
+    pychromecast==3.2.2 \
     .
 
 RUN useradd -ms /bin/bash neon
@@ -34,10 +33,6 @@ COPY docker_overlay/mycroft.conf /home/neon/.mycroft/mycroft.conf
 RUN mkdir -p /home/neon/.config/pulse && \
     mkdir -p /home/neon/.config/neon && \
     mkdir -p /home/neon/.local/share/neon && \
-    pip install \
-        pychromecast==3.2.2 \
-        python-vlc==1.1.2 \
-        git+https://github.com/JarbasAl/py_mplayer.git && \
     rm -rf ~/.cache
 
 CMD ["neon_audio_client"]
