@@ -43,6 +43,7 @@ jobs:
           password: ${{secrets.PYPI_TOKEN}}
   build_and_publish_docker:
     runs-on: ubuntu-latest
+    needs: build_and_publish_pypi
     permissions:
       contents: read
       packages: write
