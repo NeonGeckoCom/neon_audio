@@ -445,6 +445,12 @@ class TTS(metaclass=ABCMeta):
             except Exception as x:
                 LOG.error(x)
 
+            if not tts_reqs:
+                tts_reqs = [{"speaker": "Neon",
+                             "language": "en-us",
+                             "gender": "female"
+                             }]
+
             # TODO: Associate voice with cache here somehow? (would be a per-TTS engine set) DM
             LOG.debug(f"Got {len(tts_reqs)} TTS Voice Requests")
             return tts_reqs
@@ -512,7 +518,7 @@ class TTS(metaclass=ABCMeta):
                         file, phonemes = self.get_tts(translated_sentence, file, request)
                         # Update cache for next time
                         self.cached_translations[f"{lang}{key}"] = translated_sentence
-                        LOG.debug(">>>Cache Updated!<<<")
+                        LOG.debug(f">>>Cache Updated! ({file})<<<")
                         _update_pickle()
                 except Exception as e:
                     # Remove audio file if any exception occurs, this forces re-translation/cache next time
