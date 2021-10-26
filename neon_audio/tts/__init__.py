@@ -40,7 +40,7 @@ from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 from neon_utils.logger import LOG
 from neon_utils.metrics_utils import Stopwatch
-from ovos_utils.signal import create_signal, check_for_signal
+from neon_utils import create_signal, check_for_signal
 from ovos_utils import resolve_resource_file
 
 from mycroft.util import play_wav, play_mp3, get_cache_directory, curate_cache
@@ -293,7 +293,6 @@ class TTS(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
     def modify_tag(self, tag):
         """Override to modify each supported ssml tag"""
         return tag
@@ -330,7 +329,6 @@ class TTS(metaclass=ABCMeta):
         # return text with supported ssml tags only
         return utterance.replace("  ", " ")
 
-    @abstractmethod
     def _preprocess_sentence(self, sentence):
         """Default preprocessing is no preprocessing.
 
@@ -550,7 +548,6 @@ class TTS(metaclass=ABCMeta):
                 else:
                     check_for_signal("isSpeaking")
 
-    @abstractmethod
     def viseme(self, phonemes):
         """Create visemes from phonemes. Needs to be implemented for all
             tts backends.
