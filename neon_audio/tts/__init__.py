@@ -47,10 +47,6 @@ from mycroft.util import (
     play_wav, play_mp3, check_for_signal, create_signal, resolve_resource_file
 )
 
-try:  # TODO: Is this necessary anymore? DM
-    from neon_enclosure.enclosure.api import EnclosureAPI
-except ImportError:
-    EnclosureAPI = None
 
 _TTS_ENV = deepcopy(os.environ)
 _TTS_ENV['PULSE_PROP'] = 'media.role=phone'
@@ -200,7 +196,7 @@ class TTS(metaclass=ABCMeta):
 
         self.voice = config.get("voice")
         self.filename = '/tmp/tts.wav'
-        self.enclosure = None
+        # self.enclosure = None
         random.seed()
         self.queue = Queue()
         self.playback = PlaybackThread(self.queue, config)
@@ -276,9 +272,9 @@ class TTS(metaclass=ABCMeta):
         """
         self.bus = bus
         self.playback.init(self)
-        if EnclosureAPI:
-            self.enclosure = EnclosureAPI(self.bus)
-            self.playback.enclosure = self.enclosure
+        # if EnclosureAPI:
+        #     self.enclosure = EnclosureAPI(self.bus)
+        #     self.playback.enclosure = self.enclosure
 
     def get_tts(self, sentence, wav_file, request=None):
         """Abstract method that a tts implementation needs to implement.
