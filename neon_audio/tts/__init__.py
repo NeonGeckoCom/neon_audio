@@ -40,11 +40,11 @@ from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 # from ovos_utils.plugins import load_plugin
 from neon_utils.logger import LOG
-
+from neon_utils.skill_override_functions import create_signal, check_for_signal
 import mycroft.util
 from mycroft.metrics import report_timing, Stopwatch
 from mycroft.util import (
-    play_wav, play_mp3, check_for_signal, create_signal, resolve_resource_file
+    play_wav, play_mp3, resolve_resource_file
 )
 
 
