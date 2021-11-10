@@ -1,4 +1,4 @@
-neon-tts-plugin-mozilla_remote @ git+https://github.com/NeonGeckoCom/neon-tts-plugin-mozilla_remote
-ovos-core[bus]~=0.0.1
+neon-tts-plugin-mozilla_remote
+neon-core @ git+https://github.com/neongeckocom/NeonCore
 pytest
 mock~=4.0
