@@ -19,15 +19,14 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import pathlib
 import pickle
-from copy import deepcopy
 import hashlib
 import os
 import random
 import re
 import os.path
 
+from copy import deepcopy
 from abc import ABCMeta, abstractmethod
 from threading import Thread
 from time import time
@@ -35,7 +34,8 @@ from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
 
 from neon_utils.language_utils import DetectorFactory, TranslatorFactory
-from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_audio_config, get_neon_user_config
+from neon_utils.configuration_utils import get_neon_lang_config, get_neon_audio_config,\
+    get_neon_user_config, get_neon_local_config
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 from neon_utils.logger import LOG
@@ -193,7 +193,7 @@ class TTS(metaclass=ABCMeta):
         self.ssml_tags = ssml_tags or []
 
         self.voice = config.get("voice")
-        self.filename = '/tmp/tts.wav'
+        self.filename = '/tmp/tts.wav'  # TODO: Is this deprecated? DM
         # self.enclosure = None
         random.seed()
         self.queue = Queue()
@@ -204,20 +204,23 @@ class TTS(metaclass=ABCMeta):
         self.tts_name = type(self).__name__
         self.keys = {}
 
-        self.cache_dir = os.path.expanduser(NGIConfig("ngi_local_conf").get('dirVars', {})
-                                            .get('cacheDir') or "~/.local/share/neon")
+        self.cache_dir = os.path.expanduser(get_neon_local_config()['dirVars']
+                                            .get('cacheDir') or "~/.cache/neon")
+        os.makedirs(self.cache_dir, exist_ok=True)
+
         self.translation_cache = os.path.join(self.cache_dir, 'lang_dict.txt')
-        if not pathlib.Path(self.translation_cache).exists():
-            self.cached_translations = {}
-            os.makedirs(os.path.dirname(self.translation_cache), exist_ok=True)
+        if not os.path.isfile(self.translation_cache):
             open(self.translation_cache, 'wb+').close()
-        else:
-            with open(self.translation_cache, 'rb') as cached_utterances:
-                try:
-                    self.cached_translations = pickle.load(cached_utterances)
-                except EOFError:
-                    self.cached_translations = {}
-                    LOG.info("Cache file exists, but it's empty so far")
+        with open(self.translation_cache, 'rb') as cached_utterances:
+            try:
+                self.cached_translations = pickle.load(cached_utterances)
+            except EOFError:
+                self.cached_translations = {}
+                LOG.info("Cache file exists, but it's empty so far")
+
+    def shutdown(self):
+        self.playback.stop()
+        self.playback.join()
 
     def load_spellings(self):
         """Load phonetic spellings of words as dictionary"""
@@ -256,6 +259,7 @@ class TTS(metaclass=ABCMeta):
         if listen:
             self.bus.emit(Message('mycroft.mic.listen'))
         # Clean the cache as needed
+        # TODO: Check self cache path DM
         cache_dir = get_cache_directory("tts/" + self.tts_name)
         curate_cache(cache_dir, min_free_percent=100)
 
@@ -263,16 +267,13 @@ class TTS(metaclass=ABCMeta):
         check_for_signal("isSpeaking")
 
     def init(self, bus):
-        """Performs intial setup of TTS object.
+        """Performs initial setup of TTS object.
 
         Arguments:
             bus:    Mycroft messagebus connection
         """
         self.bus = bus
         self.playback.init(self)
-        # if EnclosureAPI:
-        #     self.enclosure = EnclosureAPI(self.bus)
-        #     self.playback.enclosure = self.enclosure
 
     def get_tts(self, sentence, wav_file, request=None):
         """Abstract method that a tts implementation needs to implement.
@@ -352,6 +353,7 @@ class TTS(metaclass=ABCMeta):
                             of the utterance.
                 message:    Message associated with request
         """
+        # TODO: dig_for_message here for general compat. DM
         sentence = self.validate_ssml(sentence)
 
         # multi lang support
@@ -555,6 +557,7 @@ class TTS(metaclass=ABCMeta):
 
     @staticmethod
     def clear_cache():
+        # TODO: This should probably only clear this plugin's cache DM
         """Remove all cached files."""
         if not os.path.exists(get_cache_directory('tts')):
             return
@@ -576,6 +579,7 @@ class TTS(metaclass=ABCMeta):
             key:        Hash key for the sentence
             phonemes:   phoneme string to save
         """
+        # TODO: Should this be deprecated? DM
         cache_dir = get_cache_directory("tts/" + self.tts_name)
         pho_file = os.path.join(cache_dir, key + ".pho")
         try:
@@ -606,8 +610,7 @@ class TTS(metaclass=ABCMeta):
         return None
 
     def __del__(self):
-        self.playback.stop()
-        self.playback.join()
+        self.shutdown()
 
 
 class TTSValidator(metaclass=ABCMeta):
