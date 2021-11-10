@@ -1,4 +1,5 @@
 neon-tts-plugin-mozilla_remote
+ovos-plugin-manager==0.0.1
 ovos-core[bus]~=0.0.1
 pytest
 mock~=4.0
