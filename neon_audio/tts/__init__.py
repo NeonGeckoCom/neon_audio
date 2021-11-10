@@ -33,7 +33,6 @@ from time import time
 from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
 
-from neon_utils.language_utils import DetectorFactory, TranslatorFactory
 from neon_utils.configuration_utils import get_neon_lang_config, get_neon_audio_config,\
     get_neon_user_config, get_neon_local_config
 from mycroft_bus_client import Message
@@ -42,6 +41,12 @@ from neon_utils.logger import LOG
 from neon_utils.metrics_utils import Stopwatch
 from neon_utils import create_signal, check_for_signal
 from ovos_utils import resolve_resource_file
+
+try:
+    from neon_core.language import DetectorFactory, TranslatorFactory
+except ImportError:
+    LOG.error("Language Detector and Translator not available")
+    DetectorFactory, TranslatorFactory = None, None
 
 from mycroft.util import play_wav, play_mp3, get_cache_directory, curate_cache
 
@@ -182,8 +187,8 @@ class TTS(metaclass=ABCMeta):
         self.bus = None  # initalized in "init" step
 
         self.language_config = get_neon_lang_config()
-        self.lang_detector = DetectorFactory.create()
-        self.translator = TranslatorFactory.create()
+        self.lang_detector = DetectorFactory.create() if DetectorFactory else None
+        self.translator = TranslatorFactory.create() if DetectorFactory else None
         self.lang = lang or self.language_config.get("user", "en-us")
 
         self.config = config
@@ -477,6 +482,7 @@ class TTS(metaclass=ABCMeta):
             # Go through all the audio we need and see if it is in the cache
             responses = {}
             for request in tts_requested:
+                # TODO: This is the cache dir that should be used everywhere DM
                 file = os.path.join(self.cache_dir, "tts", self.tts_name,
                                     request["language"], request["gender"], key + '.' + self.audio_ext)
                 lang = request["language"]
@@ -502,13 +508,9 @@ class TTS(metaclass=ABCMeta):
                     # If no file cached or cache error was encountered, get tts
                     if not translated_sentence:
                         LOG.debug(f"{lang}{key} not cached")
-                        if not lang.split("-", 1)[0] == "en":  # TODO: Internal lang DM
-                            try:
-                                translated_sentence = self.translator.translate(sentence, lang, "en")
-                                # request["translated"] = True
-                                LOG.info(translated_sentence)
-                            except Exception as e:
-                                LOG.error(e)
+                        if not lang.split("-", 1)[0] == "en" and self.translator:  # TODO: Internal lang DM
+                            translated_sentence = self.translator.translate(sentence, lang, "en")
+                            LOG.info(translated_sentence)
                         else:
                             translated_sentence = sentence
                         file, phonemes = self.get_tts(translated_sentence, file, request)
