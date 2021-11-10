@@ -355,6 +355,7 @@ class TTS(metaclass=ABCMeta):
                 message:    Message associated with request
         """
         sentence = self.validate_ssml(sentence)
+        sentence = normalize_string_to_speak(sentence)
 
         # multi lang support
         # NOTE this is kinda optional because skills will translate
