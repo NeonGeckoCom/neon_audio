@@ -38,14 +38,12 @@ from neon_utils.language_utils import DetectorFactory, TranslatorFactory
 from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_audio_config, get_neon_user_config
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
-# from ovos_utils.plugins import load_plugin
 from neon_utils.logger import LOG
+from neon_utils.metrics_utils import Stopwatch
+from neon_utils import create_signal, check_for_signal
+from ovos_utils import resolve_resource_file
 
-import mycroft.util
-from mycroft.metrics import report_timing, Stopwatch
-from mycroft.util import (
-    play_wav, play_mp3, check_for_signal, create_signal, resolve_resource_file
-)
+from mycroft.util import play_wav, play_mp3, get_cache_directory, curate_cache
 
 
 _TTS_ENV = deepcopy(os.environ)
@@ -123,7 +121,7 @@ class PlaybackThread(Thread):
                     if self.p:
                         self.p.communicate()
                         self.p.wait()
-                report_timing(ident, 'speech_playback', stopwatch)
+                # report_timing(ident, 'speech_playback', stopwatch)
 
                 if self.queue.empty():
                     self.tts.end_audio(listen, ident)
@@ -258,8 +256,8 @@ class TTS(metaclass=ABCMeta):
         if listen:
             self.bus.emit(Message('mycroft.mic.listen'))
         # Clean the cache as needed
-        cache_dir = mycroft.util.get_cache_directory("tts/" + self.tts_name)
-        mycroft.util.curate_cache(cache_dir, min_free_percent=100)
+        cache_dir = get_cache_directory("tts/" + self.tts_name)
+        curate_cache(cache_dir, min_free_percent=100)
 
         # This check will clear the "signal"
         check_for_signal("isSpeaking")
@@ -558,10 +556,10 @@ class TTS(metaclass=ABCMeta):
     @staticmethod
     def clear_cache():
         """Remove all cached files."""
-        if not os.path.exists(mycroft.util.get_cache_directory('tts')):
+        if not os.path.exists(get_cache_directory('tts')):
             return
-        for d in os.listdir(mycroft.util.get_cache_directory("tts")):
-            dir_path = os.path.join(mycroft.util.get_cache_directory("tts"), d)
+        for d in os.listdir(get_cache_directory("tts")):
+            dir_path = os.path.join(get_cache_directory("tts"), d)
             if os.path.isdir(dir_path):
                 for f in os.listdir(dir_path):
                     file_path = os.path.join(dir_path, f)
@@ -578,7 +576,7 @@ class TTS(metaclass=ABCMeta):
             key:        Hash key for the sentence
             phonemes:   phoneme string to save
         """
-        cache_dir = mycroft.util.get_cache_directory("tts/" + self.tts_name)
+        cache_dir = get_cache_directory("tts/" + self.tts_name)
         pho_file = os.path.join(cache_dir, key + ".pho")
         try:
             with open(pho_file, "w") as cachefile:
@@ -595,7 +593,7 @@ class TTS(metaclass=ABCMeta):
             key:    Key identifying phoneme cache
         """
         pho_file = os.path.join(
-            mycroft.util.get_cache_directory("tts/" + self.tts_name),
+            get_cache_directory("tts/" + self.tts_name),
             key + ".pho")
         if os.path.exists(pho_file):
             try:
@@ -660,13 +658,8 @@ class TTSValidator(metaclass=ABCMeta):
 
 
 class TTSFactory:
-    from mycroft.tts.mimic_tts import Mimic
-    from mycroft.tts.mimic2_tts import Mimic2
 
-    CLASSES = {
-        "mimic": Mimic,
-        "mimic2": Mimic2
-    }
+    CLASSES = {}
 
     @staticmethod
     def create(config=None):
