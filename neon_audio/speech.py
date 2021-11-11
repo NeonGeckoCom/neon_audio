@@ -31,6 +31,13 @@ from neon_utils.signal_utils import check_for_signal
 
 from neon_audio.tts import TTSFactory, TTS
 
+from mycroft.tts.remote_tts import RemoteTTSTimeoutException
+try:
+    from ovos_tts_plugin_mimic import MimicTTSPlugin
+except ImportError:
+    MimicTTSPlugin = None
+from mycroft.metrics import report_timing, Stopwatch
+
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
 config: Optional[NGIConfig] = None
 tts: Optional[TTS] = None
@@ -125,11 +132,46 @@ def mute_and_speak(utterance, message):
 
     try:
         tts.execute(utterance, message.context['ident'], listen, message)
-    # except RemoteTTSTimeoutException as e:
-    #     LOG.error(e)
-    #     mimic_fallback_tts(utterance, message.context['ident'], message)
+    except RemoteTTSTimeoutException as e:
+
+        mimic_fallback_tts(utterance, message.context['ident'], message)
     except Exception as e:
+        LOG.error(e)
+        if MimicTTSPlugin:
+            try:
+                mimic_fallback_tts(utterance, message.context['ident'], message)
+                return
+            except Exception as e2:
+                LOG.error(e2)
         LOG.error('TTS execution failed ({})'.format(repr(e)))
+
+
+def _get_mimic_fallback():
+    """Lazily initializes the fallback TTS if needed."""
+    global mimic_fallback_obj
+    if not mimic_fallback_obj:
+        config = get_neon_audio_config()
+        tts_config = config.get('tts', {}).get("mimic", {})
+        lang = config.get("lang", "en-us")
+        tts = MimicTTSPlugin(lang, tts_config)
+        tts.validator.validate()
+        tts.init(bus)
+        mimic_fallback_obj = tts
+
+    return mimic_fallback_obj
+
+
+def mimic_fallback_tts(utterance, ident, listen):
+    """Speak utterance using fallback TTS if connection is lost.
+
+    Args:
+        utterance (str): sentence to speak
+        ident (str): interaction id for metrics
+        listen (bool): True if interaction should end with mycroft listening
+    """
+    fallback_tts = _get_mimic_fallback()
+    LOG.debug("Mimic fallback, utterance : " + str(utterance))
+    fallback_tts.execute(utterance, ident, listen)
 
 
 def handle_stop(_):
