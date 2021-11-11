@@ -14,15 +14,7 @@ RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key
   apt-get update && \
   apt-get install -y alsa-utils libasound2-plugins pulseaudio-utils mimic sox vlc && \
   pip install wheel && \
-  pip install \
-    neon-tts-plugin-mozilla_local \
-    neon-tts-plugin-mozilla_remote \
-    neon-tts-plugin-polly \
-    holmesV \
-    numba==0.53 \
-    py-mplayer==0.1 \
-    pychromecast==3.2.2 \
-    .
+  pip install .[docker]
 
 RUN useradd -ms /bin/bash neon
 USER neon
