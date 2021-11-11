@@ -18,8 +18,6 @@
 # SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import os
-import os.path
 from os.path import expanduser, dirname, join
 
 from json_database import JsonStorageXDG, JsonStorage
@@ -134,19 +132,32 @@ class WrappedTTS(TTS):
         sentence = message.data["text"]
         responses = {}
         for request in tts_requested:
-            lang = request["language"]
-            if lang in self.cached_translations:
-                sentence = self.cached_translations[lang].get(sentence)
-            elif lang.split("-")[0] != "en":  # TODO: Internal lang DM
-                self.cached_translations[lang][sentence] = self.translator.translate(sentence, lang, "en")
-                self.cached_translations.store()
-                sentence = self.cached_translations[lang][sentence]
-                request["translated"] = True
+            lang = kwargs["lang"] = request["language"]
             wav_file, phonemes = self._get_tts(sentence, **kwargs)
             if not responses.get(lang):
-                responses[lang] = {"sentence": sentence}
-            if os.path.isfile(wav_file):  # Based on <speak> tags, this may not exist
-                responses[lang][request["gender"]] = wav_file
+                responses[lang] = {"sentence": sentence,
+                                   "translated": False,
+                                   "phonemes": phonemes,
+                                   request["gender"]: wav_file}
+            # translate if needed
+            if lang.split("-")[0] != self.lang.split("-")[0]:
+                tx_sentence = None
+                if lang in self.cached_translations:
+                    tx_sentence = self.cached_translations[lang].get(sentence)
+                else:
+                    self.cached_translations[lang] = {}
+                if not tx_sentence:
+                    tx_sentence = self.translator.translate(sentence, lang, self.lang)
+                    self.cached_translations[lang][sentence] = tx_sentence
+                    self.cached_translations.store()
+                tx_kwargs = dict(kwargs)
+                tx_kwargs["lang"] = self.lang
+                wav_file, phonemes = self._get_tts(tx_sentence, **tx_kwargs)
+                responses[self.lang] = {"sentence": tx_sentence,
+                                        "translated": True,
+                                        "phonemes": phonemes,
+                                        request["gender"]: wav_file}
+
         return responses
 
     def execute(self, sentence, ident=None, listen=False, **kwargs):
