@@ -23,8 +23,7 @@ from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
 
 from neon_audio import speech
-from neon_audio.audioservice import AudioService
-
+from mycroft.audio.audioservice import AudioService
 from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap, start_message_bus_client
 from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
 
@@ -62,7 +61,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
         if get_neon_device_type() == 'server':
             audio = None
         else:
-            audio = AudioService(bus, config)  # Connect audio service instance to message bus
+            audio = AudioService(bus)  # Connect audio service instance to message bus
 
         status.set_started()
     except Exception as e:
