@@ -19,38 +19,37 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import pathlib
 import pickle
-from copy import deepcopy
 import hashlib
 import os
 import random
 import re
 import os.path
 
+from copy import deepcopy
 from abc import ABCMeta, abstractmethod
 from threading import Thread
 from time import time
 from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
 
-from neon_utils.language_utils import DetectorFactory, TranslatorFactory
-from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_audio_config, get_neon_user_config
+from neon_utils.configuration_utils import get_neon_lang_config, get_neon_audio_config,\
+    get_neon_user_config, get_neon_local_config
 from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
-# from ovos_utils.plugins import load_plugin
 from neon_utils.logger import LOG
+from neon_utils.metrics_utils import Stopwatch
+from neon_utils import create_signal, check_for_signal
+from ovos_utils import resolve_resource_file
 
-import mycroft.util
-from mycroft.metrics import report_timing, Stopwatch
-from mycroft.util import (
-    play_wav, play_mp3, check_for_signal, create_signal, resolve_resource_file
-)
-
-try:  # TODO: Is this necessary anymore? DM
-    from neon_enclosure.enclosure.api import EnclosureAPI
+try:
+    from neon_core.language import DetectorFactory, TranslatorFactory
 except ImportError:
-    EnclosureAPI = None
+    LOG.error("Language Detector and Translator not available")
+    DetectorFactory, TranslatorFactory = None, None
+
+from mycroft.util import play_wav, play_mp3, get_cache_directory, curate_cache
+
 
 _TTS_ENV = deepcopy(os.environ)
 _TTS_ENV['PULSE_PROP'] = 'media.role=phone'
@@ -127,7 +126,7 @@ class PlaybackThread(Thread):
                     if self.p:
                         self.p.communicate()
                         self.p.wait()
-                report_timing(ident, 'speech_playback', stopwatch)
+                # report_timing(ident, 'speech_playback', stopwatch)
 
                 if self.queue.empty():
                     self.tts.end_audio(listen, ident)
@@ -188,8 +187,8 @@ class TTS(metaclass=ABCMeta):
         self.bus = None  # initalized in "init" step
 
         self.language_config = get_neon_lang_config()
-        self.lang_detector = DetectorFactory.create()
-        self.translator = TranslatorFactory.create()
+        self.lang_detector = DetectorFactory.create() if DetectorFactory else None
+        self.translator = TranslatorFactory.create() if DetectorFactory else None
         self.lang = lang or self.language_config.get("user", "en-us")
 
         self.config = config
@@ -199,8 +198,8 @@ class TTS(metaclass=ABCMeta):
         self.ssml_tags = ssml_tags or []
 
         self.voice = config.get("voice")
-        self.filename = '/tmp/tts.wav'
-        self.enclosure = None
+        self.filename = '/tmp/tts.wav'  # TODO: Is this deprecated? DM
+        # self.enclosure = None
         random.seed()
         self.queue = Queue()
         self.playback = PlaybackThread(self.queue, config)
@@ -210,20 +209,23 @@ class TTS(metaclass=ABCMeta):
         self.tts_name = type(self).__name__
         self.keys = {}
 
-        self.cache_dir = os.path.expanduser(NGIConfig("ngi_local_conf").get('dirVars', {})
-                                            .get('cacheDir') or "~/.local/share/neon")
+        self.cache_dir = os.path.expanduser(get_neon_local_config()['dirVars']
+                                            .get('cacheDir') or "~/.cache/neon")
+        os.makedirs(self.cache_dir, exist_ok=True)
+
         self.translation_cache = os.path.join(self.cache_dir, 'lang_dict.txt')
-        if not pathlib.Path(self.translation_cache).exists():
-            self.cached_translations = {}
-            os.makedirs(os.path.dirname(self.translation_cache), exist_ok=True)
+        if not os.path.isfile(self.translation_cache):
             open(self.translation_cache, 'wb+').close()
-        else:
-            with open(self.translation_cache, 'rb') as cached_utterances:
-                try:
-                    self.cached_translations = pickle.load(cached_utterances)
-                except EOFError:
-                    self.cached_translations = {}
-                    LOG.info("Cache file exists, but it's empty so far")
+        with open(self.translation_cache, 'rb') as cached_utterances:
+            try:
+                self.cached_translations = pickle.load(cached_utterances)
+            except EOFError:
+                self.cached_translations = {}
+                LOG.info("Cache file exists, but it's empty so far")
+
+    def shutdown(self):
+        self.playback.stop()
+        self.playback.join()
 
     def load_spellings(self):
         """Load phonetic spellings of words as dictionary"""
@@ -262,23 +264,21 @@ class TTS(metaclass=ABCMeta):
         if listen:
             self.bus.emit(Message('mycroft.mic.listen'))
         # Clean the cache as needed
-        cache_dir = mycroft.util.get_cache_directory("tts/" + self.tts_name)
-        mycroft.util.curate_cache(cache_dir, min_free_percent=100)
+        # TODO: Check self cache path DM
+        cache_dir = get_cache_directory("tts/" + self.tts_name)
+        curate_cache(cache_dir, min_free_percent=100)
 
         # This check will clear the "signal"
         check_for_signal("isSpeaking")
 
     def init(self, bus):
-        """Performs intial setup of TTS object.
+        """Performs initial setup of TTS object.
 
         Arguments:
             bus:    Mycroft messagebus connection
         """
         self.bus = bus
         self.playback.init(self)
-        if EnclosureAPI:
-            self.enclosure = EnclosureAPI(self.bus)
-            self.playback.enclosure = self.enclosure
 
     def get_tts(self, sentence, wav_file, request=None):
         """Abstract method that a tts implementation needs to implement.
@@ -358,6 +358,7 @@ class TTS(metaclass=ABCMeta):
                             of the utterance.
                 message:    Message associated with request
         """
+        # TODO: dig_for_message here for general compat. DM
         sentence = self.validate_ssml(sentence)
 
         # multi lang support
@@ -445,6 +446,12 @@ class TTS(metaclass=ABCMeta):
             except Exception as x:
                 LOG.error(x)
 
+            if not tts_reqs:
+                tts_reqs = [{"speaker": "Neon",
+                             "language": "en-us",
+                             "gender": "female"
+                             }]
+
             # TODO: Associate voice with cache here somehow? (would be a per-TTS engine set) DM
             LOG.debug(f"Got {len(tts_reqs)} TTS Voice Requests")
             return tts_reqs
@@ -475,6 +482,7 @@ class TTS(metaclass=ABCMeta):
             # Go through all the audio we need and see if it is in the cache
             responses = {}
             for request in tts_requested:
+                # TODO: This is the cache dir that should be used everywhere DM
                 file = os.path.join(self.cache_dir, "tts", self.tts_name,
                                     request["language"], request["gender"], key + '.' + self.audio_ext)
                 lang = request["language"]
@@ -500,19 +508,15 @@ class TTS(metaclass=ABCMeta):
                     # If no file cached or cache error was encountered, get tts
                     if not translated_sentence:
                         LOG.debug(f"{lang}{key} not cached")
-                        if not lang.split("-", 1)[0] == "en":  # TODO: Internal lang DM
-                            try:
-                                translated_sentence = self.translator.translate(sentence, lang, "en")
-                                # request["translated"] = True
-                                LOG.info(translated_sentence)
-                            except Exception as e:
-                                LOG.error(e)
+                        if not lang.split("-", 1)[0] == "en" and self.translator:  # TODO: Internal lang DM
+                            translated_sentence = self.translator.translate(sentence, lang, "en")
+                            LOG.info(translated_sentence)
                         else:
                             translated_sentence = sentence
                         file, phonemes = self.get_tts(translated_sentence, file, request)
                         # Update cache for next time
                         self.cached_translations[f"{lang}{key}"] = translated_sentence
-                        LOG.debug(">>>Cache Updated!<<<")
+                        LOG.debug(f">>>Cache Updated! ({file})<<<")
                         _update_pickle()
                 except Exception as e:
                     # Remove audio file if any exception occurs, this forces re-translation/cache next time
@@ -555,11 +559,12 @@ class TTS(metaclass=ABCMeta):
 
     @staticmethod
     def clear_cache():
+        # TODO: This should probably only clear this plugin's cache DM
         """Remove all cached files."""
-        if not os.path.exists(mycroft.util.get_cache_directory('tts')):
+        if not os.path.exists(get_cache_directory('tts')):
             return
-        for d in os.listdir(mycroft.util.get_cache_directory("tts")):
-            dir_path = os.path.join(mycroft.util.get_cache_directory("tts"), d)
+        for d in os.listdir(get_cache_directory("tts")):
+            dir_path = os.path.join(get_cache_directory("tts"), d)
             if os.path.isdir(dir_path):
                 for f in os.listdir(dir_path):
                     file_path = os.path.join(dir_path, f)
@@ -576,7 +581,8 @@ class TTS(metaclass=ABCMeta):
             key:        Hash key for the sentence
             phonemes:   phoneme string to save
         """
-        cache_dir = mycroft.util.get_cache_directory("tts/" + self.tts_name)
+        # TODO: Should this be deprecated? DM
+        cache_dir = get_cache_directory("tts/" + self.tts_name)
         pho_file = os.path.join(cache_dir, key + ".pho")
         try:
             with open(pho_file, "w") as cachefile:
@@ -593,7 +599,7 @@ class TTS(metaclass=ABCMeta):
             key:    Key identifying phoneme cache
         """
         pho_file = os.path.join(
-            mycroft.util.get_cache_directory("tts/" + self.tts_name),
+            get_cache_directory("tts/" + self.tts_name),
             key + ".pho")
         if os.path.exists(pho_file):
             try:
@@ -606,8 +612,7 @@ class TTS(metaclass=ABCMeta):
         return None
 
     def __del__(self):
-        self.playback.stop()
-        self.playback.join()
+        self.shutdown()
 
 
 class TTSValidator(metaclass=ABCMeta):
@@ -658,13 +663,8 @@ class TTSValidator(metaclass=ABCMeta):
 
 
 class TTSFactory:
-    from mycroft.tts.mimic_tts import Mimic
-    from mycroft.tts.mimic2_tts import Mimic2
 
-    CLASSES = {
-        "mimic": Mimic,
-        "mimic2": Mimic2
-    }
+    CLASSES = {}
 
     @staticmethod
     def create(config=None):

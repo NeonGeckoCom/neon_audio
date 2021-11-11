@@ -19,4 +19,31 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__version__ = "0.4.0"
+from neon_audio.tts import TTS, TTSValidator
+
+
+class DummyTTS(TTS):
+    def __init__(self, lang: str, config: dict):
+        super(DummyTTS, self).__init__(lang, config, DummyTTSValidator(self),
+                                       "mp3", False, ["speak"])
+
+    def get_tts(self, sentence, wav_file, **kwargs):
+        return wav_file, None
+
+
+class DummyTTSValidator(TTSValidator):
+    def __init__(self, tts):
+        super(DummyTTSValidator, self).__init__(tts)
+
+    def validate_lang(self):
+        assert self.tts.lang.startswith("en")
+        return True
+
+    def validate_dependencies(self):
+        return True
+
+    def validate_connection(self):
+        return True
+
+    def get_tts_class(self):
+        return DummyTTS

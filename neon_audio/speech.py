@@ -22,7 +22,7 @@
 import time
 from threading import Lock
 from typing import Optional
-from ovos_utils.log import LOG
+from neon_utils import LOG
 from ovos_utils.signal import check_for_signal
 from mycroft_bus_client import Message, MessageBusClient
 
