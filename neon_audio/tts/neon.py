@@ -114,7 +114,7 @@ class WrappedTTS(TTS):
 
         # TODO should cache be handled directly in each individual plugin?
         #   would also allow to do it per engine which can be advantageous
-        neon_cache_dir = expanduser(get_neon_local_config()['dirVars'].get('cacheDir') or "~/.cache/neon")
+        neon_cache_dir = get_neon_local_config()['dirVars'].get('cacheDir') or "~/.cache/neon"
         if neon_cache_dir:
             cache_dir = expanduser(neon_cache_dir)
             cached_translations = JsonStorage(join(cache_dir, "tx_cache.json"))
