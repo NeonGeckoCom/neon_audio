@@ -22,11 +22,10 @@ from os.path import expanduser, dirname, join
 
 from json_database import JsonStorageXDG, JsonStorage
 from mycroft.util.log import LOG
+from mycroft_bus_client.message import dig_for_message
 from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_user_config
 from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
 from ovos_plugin_manager.tts import TTS
-from ovos_utils.signal import create_signal
-from mycroft_bus_client.message import dig_for_message
 
 
 def get_requested_tts_languages(msg) -> list:
@@ -140,6 +139,7 @@ class WrappedTTS(TTS):
                 responses[lang] = {"sentence": sentence,
                                    "translated": False,
                                    "phonemes": phonemes,
+                                   "gender": request["gender"],
                                    request["gender"]: wav_file}
             # translate if needed
             if lang.split("-")[0] != self.lang.split("-")[0]:
@@ -158,6 +158,7 @@ class WrappedTTS(TTS):
                 responses[self.lang] = {"sentence": tx_sentence,
                                         "translated": True,
                                         "phonemes": phonemes,
+                                        "gender": request["gender"],
                                         request["gender"]: wav_file}
 
         return responses
@@ -176,12 +177,24 @@ class WrappedTTS(TTS):
             kwargs: (dict) optional keyword arguments to be passed to TTS engine get_tts method
         """
         message = kwargs.get("message") or dig_for_message()
-        # TODO dedicated klat handler
-        if message and message.context.get("klat_data"):
+        if message:
             responses = self._get_multiple_tts(message, **kwargs)
             LOG.debug(f"responses={responses}")
-            self.bus.emit(message.forward("klat.response",
-                                          {"responses": responses,
-                                           "speaker": message.data.get("speaker")}))
+
+            # TODO dedicated klat handler/plugin
+            if message.context.get("klat_data"):
+                self.bus.emit(message.forward("klat.response",
+                                              {"responses": responses,
+                                               "speaker": message.data.get("speaker")}))
+            else:
+                # planned feature with the intent in translate.neon: "speak to me in x and y"
+                for r in responses:
+                    # get audio for selected voice gender
+                    wav_file = r[r["gender"]]
+                    # get mouth movement data
+                    vis = self.viseme(r["phonemes"]) if r["phonemes"] else None
+                    # queue for playback
+                    self.queue.put((self.audio_ext, wav_file, vis, ident, listen))
+                    self.handle_metric({"metric_type": "tts.queued"})
         else:
             super().execute(sentence, ident, listen, **kwargs)
