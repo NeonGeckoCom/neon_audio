@@ -64,7 +64,7 @@ def handle_get_tts(message):
             bus.emit(message.reply(ident, data={"error": f"text is not a str: {text}"}))
             return
         try:
-            responses = tts.execute(text, message=message)
+            responses = tts._get_multiple_tts(message)
             # TODO: Consider including audio bytes here in case path is inaccessible DM
             # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path}}
             bus.emit(message.reply(ident, data=responses))
