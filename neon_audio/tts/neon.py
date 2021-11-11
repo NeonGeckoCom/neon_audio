@@ -26,6 +26,7 @@ from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_
 from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
 from ovos_plugin_manager.tts import TTS
 from ovos_utils.signal import create_signal
+from mycroft_bus_client.message import dig_for_message
 
 
 def get_requested_tts_languages(msg) -> list:
@@ -177,7 +178,7 @@ class WrappedTTS(TTS):
         self.handle_metric({"metric_type": "tts.ssml.validated"})
         create_signal("isSpeaking")
 
-        message = kwargs.get("message")
+        message = kwargs.get("message") or dig_for_message()
         if message:
             message.data["text"] = sentence  # ssml validated now
             responses = self._parse_message(message, **kwargs)
