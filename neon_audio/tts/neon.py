@@ -23,7 +23,7 @@ from os.path import expanduser, dirname, join
 from json_database import JsonStorageXDG, JsonStorage
 from mycroft.util.log import LOG
 from mycroft_bus_client.message import dig_for_message
-from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_user_config
+from neon_utils.configuration_utils import get_neon_lang_config, get_neon_user_config, get_neon_local_config
 from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
 from ovos_plugin_manager.tts import TTS
 
@@ -114,7 +114,7 @@ class WrappedTTS(TTS):
 
         # TODO should cache be handled directly in each individual plugin?
         #   would also allow to do it per engine which can be advantageous
-        neon_cache_dir = NGIConfig("ngi_local_conf").get('dirVars', {}).get('cacheDir')
+        neon_cache_dir = expanduser(get_neon_local_config()['dirVars'].get('cacheDir') or "~/.cache/neon")
         if neon_cache_dir:
             cache_dir = expanduser(neon_cache_dir)
             cached_translations = JsonStorage(join(cache_dir, "tx_cache.json"))
