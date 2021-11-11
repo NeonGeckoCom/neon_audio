@@ -92,7 +92,7 @@ def get_requested_tts_languages(msg) -> list:
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
         base_engine.execute = cls.execute
-        base_engine._parse_message = cls._parse_message
+        base_engine._get_multiple_tts = cls._get_multiple_tts
         return cls._init_neon(base_engine, *args, **kwargs)
 
     @staticmethod
@@ -127,7 +127,7 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
         return base_engine
 
-    def _parse_message(self, message, **kwargs):
+    def _get_multiple_tts(self, message, **kwargs):
         tts_requested = get_requested_tts_languages(message)
         LOG.debug(f"tts_requested={tts_requested}")
         sentence = message.data["text"]
@@ -181,10 +181,10 @@ class WrappedTTS(TTS):
         message = kwargs.get("message") or dig_for_message()
         if message:
             message.data["text"] = sentence  # ssml validated now
-            responses = self._parse_message(message, **kwargs)
+            responses = self._get_multiple_tts(message, **kwargs)
             # TODO dedicated klat plugin
             if message.context.get("klat_data"):
-                responses = self._parse_message(message, **kwargs)
+                responses = self._get_multiple_tts(message, **kwargs)
                 LOG.debug(f"responses={responses}")
                 self.bus.emit(message.forward("klat.response",
                                               {"responses": responses,
@@ -192,7 +192,7 @@ class WrappedTTS(TTS):
             # API Call
             # TODO dedicated handler
             elif message.msg_type in ["neon.get_tts"]:
-                return self._parse_message(message, **kwargs)
+                return self._get_multiple_tts(message, **kwargs)
             # on device usage
             else:
                 for lang, data in responses.items():
