@@ -30,7 +30,10 @@ from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
 from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException
-from mycroft.tts.mimic_tts import Mimic
+try:
+    from ovos_tts_plugin_mimic import MimicTTSPlugin
+except ImportError:
+    MimicTTSPlugin = None
 from mycroft.metrics import report_timing, Stopwatch
 
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
@@ -128,9 +131,16 @@ def mute_and_speak(utterance, message):
     try:
         tts.execute(utterance, message.context['ident'], listen, message)
     except RemoteTTSTimeoutException as e:
-        LOG.error(e)
+
         mimic_fallback_tts(utterance, message.context['ident'], message)
     except Exception as e:
+        LOG.error(e)
+        if MimicTTSPlugin:
+            try:
+                mimic_fallback_tts(utterance, message.context['ident'], message)
+                return
+            except Exception as e2:
+                LOG.error(e2)
         LOG.error('TTS execution failed ({})'.format(repr(e)))
 
 
@@ -141,7 +151,7 @@ def _get_mimic_fallback():
         config = get_neon_audio_config()
         tts_config = config.get('tts', {}).get("mimic", {})
         lang = config.get("lang", "en-us")
-        tts = Mimic(lang, tts_config)
+        tts = MimicTTSPlugin(lang, tts_config)
         tts.validator.validate()
         tts.init(bus)
         mimic_fallback_obj = tts
