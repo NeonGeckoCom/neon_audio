@@ -131,6 +131,7 @@ class WrappedTTS(TTS):
         tts_requested = get_requested_tts_languages(message)
         LOG.debug(f"tts_requested={tts_requested}")
         sentence = message.data["text"]
+        sentence = self.validate_ssml(sentence)
         responses = {}
         for request in tts_requested:
             lang = kwargs["lang"] = request["language"]
@@ -174,29 +175,13 @@ class WrappedTTS(TTS):
                     of the utterance.
             kwargs: (dict) optional keyword arguments to be passed to TTS engine get_tts method
         """
-        sentence = self.validate_ssml(sentence)
-        self.handle_metric({"metric_type": "tts.ssml.validated"})
-        create_signal("isSpeaking")
-
         message = kwargs.get("message") or dig_for_message()
-        if message:
-            message.data["text"] = sentence  # ssml validated now
+        # TODO dedicated klat handler
+        if message and message.context.get("klat_data"):
             responses = self._get_multiple_tts(message, **kwargs)
-            # TODO dedicated klat plugin
-            if message.context.get("klat_data"):
-                responses = self._get_multiple_tts(message, **kwargs)
-                LOG.debug(f"responses={responses}")
-                self.bus.emit(message.forward("klat.response",
-                                              {"responses": responses,
-                                               "speaker": message.data.get("speaker")}))
-            # API Call
-            # TODO dedicated handler
-            elif message.msg_type in ["neon.get_tts"]:
-                return self._get_multiple_tts(message, **kwargs)
-            # on device usage
-            else:
-                for lang, data in responses.items():
-                    kwargs["lang"] = lang
-                    # calling execute is fine, the audio will be cached already
-                    super().execute(data["sentence"], ident, listen, **kwargs)
-            return
+            LOG.debug(f"responses={responses}")
+            self.bus.emit(message.forward("klat.response",
+                                          {"responses": responses,
+                                           "speaker": message.data.get("speaker")}))
+        else:
+            super().execute(sentence, ident, listen, **kwargs)
