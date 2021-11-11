@@ -19,25 +19,20 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import pathlib
-import pickle
-import hashlib
+
 import os
-import re
 import os.path
 
-from os.path import exists, expanduser, dirname
+from os.path import expanduser, dirname, join
 from json_database import JsonStorageXDG, JsonStorage
-from neon_utils.language_utils import DetectorFactory, TranslatorFactory
 from neon_utils.configuration_utils import get_neon_lang_config, NGIConfig, get_neon_audio_config, get_neon_user_config
-from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 from neon_utils.logger import LOG
 from ovos_plugin_manager.tts import TTS as _TTS, OVOSTTSFactory
 from ovos_plugin_manager.templates.tts import PlaybackThread, TTSValidator
-from ovos_utils.signal import check_for_signal
+from ovos_utils.signal import check_for_signal, create_signal
+from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
 
-import xdg.BaseDirectory
 
 def _get_requested_tts_languages(msg) -> list:
     """
@@ -136,10 +131,11 @@ class TTS(_TTS):
         # unify the config !
         self.language_config = get_neon_lang_config()
         self.lang = self.lang or self.language_config.get("user", "en-us")
-        # TODO import from OPM, pass the neon config to create()
-        self.lang_detector = DetectorFactory.create()
-        self.translator = TranslatorFactory.create()
+        self.lang_detector = OVOSLangDetectionFactory.create(self.language_config)
+        self.translator = OVOSLangTranslationFactory.create(self.language_config)
 
+        # TODO should cache be handled directly in each individual plugin?
+        #   would also allow to do it per engine which can be advantageous
         neon_cache_dir = NGIConfig("ngi_local_conf").get('dirVars', {}).get('cacheDir')
         if neon_cache_dir:
             self.cache_dir = expanduser(neon_cache_dir)
