@@ -22,14 +22,16 @@
 import time
 from threading import Lock
 from typing import Optional
-from ovos_utils.log import LOG
-from ovos_utils.signal import check_for_signal
-from mycroft_bus_client import Message, MessageBusClient
-
-from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
-from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException
+from mycroft_bus_client import Message, MessageBusClient
+from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
+from ovos_plugin_manager.tts import TTS
+from ovos_utils.log import LOG
+from ovos_utils.signal import check_for_signal
+
+from neon_audio.tts import TTSFactory
+
 try:
     from ovos_tts_plugin_mimic import MimicTTSPlugin
 except ImportError:
