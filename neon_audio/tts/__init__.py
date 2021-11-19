@@ -21,7 +21,7 @@
 
 
 from neon_utils.configuration_utils import get_neon_audio_config
-from ovos_plugin_manager.tts import OVOSTTSFactory, get_tts_config
+from ovos_plugin_manager.tts import OVOSTTSFactory, get_tts_config, TTS
 
 from neon_audio.tts.neon import WrappedTTS
 
