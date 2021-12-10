@@ -39,7 +39,7 @@ from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 from neon_utils.logger import LOG
 from neon_utils.metrics_utils import Stopwatch
-from neon_utils import create_signal, check_for_signal
+from neon_utils.signal_utils import check_for_signal, create_signal
 from ovos_utils import resolve_resource_file
 
 try:

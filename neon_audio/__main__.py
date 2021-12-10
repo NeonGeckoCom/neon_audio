@@ -26,9 +26,9 @@ from neon_utils.logger import LOG
 
 from neon_audio import speech
 from neon_audio.audioservice import AudioService
-
+from neon_utils.signal_utils import check_for_signal
 from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap
-from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
+from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 
 
 def on_ready():
