@@ -24,6 +24,7 @@ import shutil
 import sys
 import unittest
 
+from threading import Event
 from mock import Mock
 from ovos_utils.messagebus import FakeBus
 
@@ -41,6 +42,7 @@ class TTSBaseClassTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.test_cache_dir = join(dirname(__file__), "test_cache")
         cls.test_conf_dir = join(dirname(__file__), "config")
+        os.makedirs(cls.test_conf_dir)
         os.environ["NEON_CONFIG_PATH"] = cls.test_conf_dir
         config = get_neon_local_config()
         config["dirVars"]["cacheDir"] = cls.test_cache_dir
@@ -48,7 +50,10 @@ class TTSBaseClassTests(unittest.TestCase):
         cls.config = dict()
         cls.lang = "en-us"
         cls.tts = DummyTTS(cls.lang, cls.config)
-        cls.tts.init(FakeBus())
+        bus = FakeBus()
+        bus.connected_event = Event()
+        bus.connected_event.set()
+        cls.tts.init(bus)
 
     @classmethod
     def tearDownClass(cls) -> None:
