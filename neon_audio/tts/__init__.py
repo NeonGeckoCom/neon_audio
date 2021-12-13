@@ -54,6 +54,8 @@ from mycroft.util import play_wav, play_mp3, get_cache_directory, curate_cache
 _TTS_ENV = deepcopy(os.environ)
 _TTS_ENV['PULSE_PROP'] = 'media.role=phone'
 
+_IPC_DIR = get_neon_local_config()["dirVars"]["ipcDir"]
+
 EMPTY_PLAYBACK_QUEUE_TUPLE = (None, None, None, None, None)
 
 
@@ -376,7 +378,7 @@ class TTS(metaclass=ABCMeta):
         # LOG.debug("Detected language: {lang}".format(lang=detected_lang))
         # if detected_lang != user_lang.split("-")[0]:
         #     sentence = self.translator.translate(sentence, user_lang)
-        create_signal("isSpeaking")
+        create_signal("isSpeaking", config={"ipc_path": _IPC_DIR})
 
         try:
             return self._execute(sentence, ident, listen, message)
@@ -547,7 +549,7 @@ class TTS(metaclass=ABCMeta):
                     for response in response_audio_files:
                         self.queue.put((self.audio_ext, str(response), vis, ident, listen))
                 else:
-                    check_for_signal("isSpeaking")
+                    check_for_signal("isSpeaking", config={"ipc_path": _IPC_DIR})
 
     def viseme(self, phonemes):
         """Create visemes from phonemes. Needs to be implemented for all
