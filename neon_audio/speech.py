@@ -20,6 +20,7 @@
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
+
 from threading import Lock
 from typing import Optional
 from neon_utils import LOG
@@ -27,11 +28,11 @@ from ovos_utils.signal import check_for_signal
 from mycroft_bus_client import Message, MessageBusClient
 
 from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
+from neon_utils.metrics_utils import Stopwatch, report_metric
 from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException
 from mycroft.tts.mimic_tts import Mimic
-from mycroft.metrics import report_timing, Stopwatch
 
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
 config: Optional[NGIConfig] = None
@@ -92,12 +93,12 @@ def handle_speak(message):
 
     with lock:
         stopwatch = Stopwatch()
-        stopwatch.start()
-        utterance = message.data['utterance']
-        mute_and_speak(utterance, message)
-        stopwatch.stop()
-    report_timing(message.context['ident'], 'speech', stopwatch,
-                  {'utterance': utterance, 'tts': tts.__class__.__name__})
+        with stopwatch:
+            utterance = message.data['utterance']
+            mute_and_speak(utterance, message)
+
+    report_metric("mute_and_speak", ident=message.context['ident'],
+                  time=stopwatch.time, utterance=utterance, tts=tts.__class__.__name__)
 
 
 def mute_and_speak(utterance, message):
@@ -138,13 +139,13 @@ def _get_mimic_fallback():
     """Lazily initializes the fallback TTS if needed."""
     global mimic_fallback_obj
     if not mimic_fallback_obj:
-        config = get_neon_audio_config()
-        tts_config = config.get('tts', {}).get("mimic", {})
-        lang = config.get("lang", "en-us")
-        tts = Mimic(lang, tts_config)
-        tts.validator.validate()
-        tts.init(bus)
-        mimic_fallback_obj = tts
+        audio_config = get_neon_audio_config()
+        tts_config = audio_config.get('tts', {}).get("mimic", {})
+        lang = audio_config.get("lang", "en-us")
+        fallback_tts = Mimic(lang, tts_config)
+        fallback_tts.validator.validate()
+        fallback_tts.init(bus)
+        mimic_fallback_obj = fallback_tts
 
     return mimic_fallback_obj
 
