@@ -61,6 +61,11 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
     status = ProcessStatus('audio', bus, callbacks)
     try:
         speech.init(bus, config)
+
+        from neon_utils.signal_utils import init_signal_bus, init_signal_handlers
+        init_signal_bus(bus)
+        init_signal_handlers()
+
         # Connect audio service instance to message bus
         if get_neon_device_type() == 'server':
             audio = None
