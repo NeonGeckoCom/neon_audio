@@ -19,6 +19,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
 
@@ -51,8 +52,8 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
     """
     reset_sigint_handler()
     check_for_signal("isSpeaking")
-    whitelist = ['mycroft.audio.service']
-    bus = start_message_bus_client("AUDIO", whitelist=whitelist)
+    # whitelist = ['mycroft.audio.service']
+    bus = get_messagebus()
     callbacks = StatusCallbackMap(on_ready=ready_hook, on_error=error_hook,
                                   on_stopping=stopping_hook)
     status = ProcessStatus('audio', bus, callbacks)
