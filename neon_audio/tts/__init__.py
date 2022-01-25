@@ -447,6 +447,7 @@ class TTS(metaclass=ABCMeta):
                 LOG.error(x)
 
             if not tts_reqs:
+                LOG.warning(f"No tts requested; using default en-us")
                 tts_reqs = [{"speaker": "Neon",
                              "language": "en-us",
                              "gender": "female"

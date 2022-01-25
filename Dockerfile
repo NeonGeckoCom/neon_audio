@@ -1,30 +1,39 @@
-FROM python:3.8
+FROM python:3.8-slim
 
 LABEL vendor=neon.ai \
     ai.neon.name="neon-audio"
 
+ENV NEON_CONFIG_PATH /config
+
+RUN  apt-get update && \
+     apt-get install -y \
+     curl \
+     gpg
+
+RUN  curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key | \
+     gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/mycroft-desktop.gpg --import - && \
+     chmod a+r /etc/apt/trusted.gpg.d/mycroft-desktop.gpg && \
+     echo "deb http://forslund.github.io/mycroft-desktop-repo bionic main" \
+     > /etc/apt/sources.list.d/mycroft-mimic.list
+
+RUN apt-get update && \
+    apt-get install -y \
+    alsa-utils \
+    libasound2-plugins \
+    pulseaudio-utils \
+    sox \
+    vlc \
+    ffmpeg \
+    mimic \
+    gcc
+
 ADD . /neon_audio
 WORKDIR /neon_audio
 
+RUN pip install wheel && \
+    pip install .[docker]
 
-RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key | \
-  apt-key add - 2>/dev/null && \
-  echo "deb http://forslund.github.io/mycroft-desktop-repo bionic main" \
-  > /etc/apt/sources.list.d/mycroft-mimic.list && \
-  apt-get update && \
-  apt-get install -y alsa-utils libasound2-plugins pulseaudio-utils mimic sox vlc && \
-  pip install wheel && \
-  pip install .[docker]
-
-RUN useradd -ms /bin/bash neon
-USER neon
-
-COPY docker_overlay/asoundrc /home/neon/.asoundrc
-COPY docker_overlay/mycroft.conf /home/neon/.mycroft/mycroft.conf
-
-RUN mkdir -p /home/neon/.config/pulse && \
-    mkdir -p /home/neon/.config/neon && \
-    mkdir -p /home/neon/.local/share/neon && \
-    rm -rf ~/.cache
+COPY docker_overlay/asoundrc /root/.asoundrc
+COPY docker_overlay/mycroft.conf /root/.mycroft/mycroft.conf
 
 CMD ["neon_audio_client"]

@@ -1,7 +1,11 @@
 requests
 mycroft-messagebus-client>=0.8.4,!=0.9.2,!=0.9.3
 ovos_utils~=0.0.8
-phoneme-guesser~=0.1
-ovos-plugin-manager~=0.0.1
-python-vlc==1.1.2
-neon-utils>=0.5.7
+# phoneme-guesser~=0.1
+# ovos-plugin-manager~=0.0.1
+ovos-plugin-manager==0.0.2
+SpeechRecognition==3.8.1
+# TODO: Above patching OPM bug
+python-vlc~=1.1,>=1.1.2
+neon-utils>=0.14.3a7
+# TODO: Update to release
