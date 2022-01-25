@@ -31,9 +31,6 @@ from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
 from neon_utils.metrics_utils import Stopwatch, report_metric
 from neon_audio.tts import TTSFactory, TTS
 
-from mycroft.tts.remote_tts import RemoteTTSTimeoutException
-from mycroft.tts.mimic_tts import Mimic
-
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
 config: Optional[NGIConfig] = None
 tts: Optional[TTS] = None
@@ -128,39 +125,11 @@ def mute_and_speak(utterance, message):
 
     try:
         tts.execute(utterance, message.context['ident'], listen, message)
-    except RemoteTTSTimeoutException as e:
-        LOG.error(e)
-        mimic_fallback_tts(utterance, message.context['ident'], message)
+    # except RemoteTTSTimeoutException as e:
+    #     LOG.error(e)
+    #     mimic_fallback_tts(utterance, message.context['ident'], message)
     except Exception as e:
         LOG.error('TTS execution failed ({})'.format(repr(e)))
-
-
-def _get_mimic_fallback():
-    """Lazily initializes the fallback TTS if needed."""
-    global mimic_fallback_obj
-    if not mimic_fallback_obj:
-        audio_config = get_neon_audio_config()
-        tts_config = audio_config.get('tts', {}).get("mimic", {})
-        lang = audio_config.get("lang", "en-us")
-        fallback_tts = Mimic(lang, tts_config)
-        fallback_tts.validator.validate()
-        fallback_tts.init(bus)
-        mimic_fallback_obj = fallback_tts
-
-    return mimic_fallback_obj
-
-
-def mimic_fallback_tts(utterance, ident, listen):
-    """Speak utterance using fallback TTS if connection is lost.
-
-    Args:
-        utterance (str): sentence to speak
-        ident (str): interaction id for metrics
-        listen (bool): True if interaction should end with mycroft listening
-    """
-    fallback_tts = _get_mimic_fallback()
-    LOG.debug("Mimic fallback, utterance : " + str(utterance))
-    fallback_tts.execute(utterance, ident, listen)
 
 
 def handle_stop(_):
