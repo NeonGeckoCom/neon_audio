@@ -20,13 +20,14 @@
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from neon_utils.messagebus_utils import get_messagebus
-from neon_utils.configuration_utils import get_neon_device_type
+from neon_utils.configuration_utils import get_neon_device_type,\
+    init_config_dir
 from neon_utils.logger import LOG
 
 from neon_audio import speech
 from neon_audio.audioservice import AudioService
 
-from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap, start_message_bus_client
+from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap
 from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
 
 
@@ -50,6 +51,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
      :param stopping_hook: Optional function to call when service is stopping
      :param config: dict configuration containing keys: ['tts', 'Audio', 'language']
     """
+    init_config_dir()
     reset_sigint_handler()
     check_for_signal("isSpeaking")
     # whitelist = ['mycroft.audio.service']

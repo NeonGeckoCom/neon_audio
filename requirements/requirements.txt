@@ -7,5 +7,5 @@ ovos-plugin-manager==0.0.2
 SpeechRecognition==3.8.1
 # TODO: Above patching OPM bug
 python-vlc~=1.1,>=1.1.2
-neon-utils>=0.14.3a7
+neon-utils~=0.14,>=0.14.3a15
 # TODO: Update to release
