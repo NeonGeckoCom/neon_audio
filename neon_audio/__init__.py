@@ -20,9 +20,9 @@
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
-from ovos_utils.signal import check_for_signal, create_signal
-from neon_utils.configuration_utils import get_neon_local_config
 
+from neon_utils.configuration_utils import get_neon_local_config
+from neon_utils.signal_utils import create_signal, check_for_signal
 
 _CONFIG = None
 

@@ -39,8 +39,9 @@ from mycroft_bus_client import Message
 from ovos_plugin_manager.tts import load_tts_plugin
 from neon_utils.logger import LOG
 from neon_utils.metrics_utils import Stopwatch
-from neon_utils.signal_utils import check_for_signal, create_signal
 from ovos_utils import resolve_resource_file
+
+from neon_utils.signal_utils import create_signal, check_for_signal
 
 try:
     from neon_core.language import DetectorFactory, TranslatorFactory
@@ -378,7 +379,7 @@ class TTS(metaclass=ABCMeta):
         # LOG.debug("Detected language: {lang}".format(lang=detected_lang))
         # if detected_lang != user_lang.split("-")[0]:
         #     sentence = self.translator.translate(sentence, user_lang)
-        create_signal("isSpeaking", config={"ipc_path": _IPC_DIR})
+        create_signal("isSpeaking")
 
         try:
             return self._execute(sentence, ident, listen, message)
