@@ -22,8 +22,7 @@
 import time
 from ovos_utils.signal import check_for_signal, create_signal
 from neon_utils.configuration_utils import get_neon_local_config
-from neon_utils.signal_utils import init_signal_handlers
-init_signal_handlers()
+
 
 _CONFIG = None
 
