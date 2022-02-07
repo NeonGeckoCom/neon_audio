@@ -28,7 +28,7 @@ from threading import Event
 from mock import Mock
 from ovos_utils.messagebus import FakeBus
 
-from neon_utils import is_speaking
+from neon_utils.signal_utils import check_for_signal
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.tts import *
@@ -121,7 +121,7 @@ class TTSBaseClassTests(unittest.TestCase):
         default_execute = self.tts._execute
         self.tts._execute = Mock()
         self.tts.execute(sentence, ident)
-        self.assertTrue(is_speaking())
+        self.assertTrue(check_for_signal("isSpeaking"))
         self.tts._execute.assert_called_once_with(sentence, ident, False, None)
         self.tts._execute = default_execute
 

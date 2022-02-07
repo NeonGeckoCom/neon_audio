@@ -41,7 +41,7 @@ from neon_utils.logger import LOG
 from neon_utils.metrics_utils import Stopwatch
 from ovos_utils import resolve_resource_file
 
-from neon_utils.signal_utils import create_signal, check_for_signal
+from neon_utils.signal_utils import create_signal, check_for_signal, init_signal_bus
 
 try:
     from neon_core.language import DetectorFactory, TranslatorFactory
@@ -88,7 +88,8 @@ class PlaybackThread(Thread):
         while not self.queue.empty():
             self.queue.get()
         try:
-            self.p.terminate()
+            if self.p:
+                self.p.terminate()
         except Exception as e:
             LOG.error(e)
 
@@ -281,6 +282,7 @@ class TTS(metaclass=ABCMeta):
             bus:    Mycroft messagebus connection
         """
         self.bus = bus
+        init_signal_bus(self.bus)
         self.playback.init(self)
 
     def get_tts(self, sentence, wav_file, request=None):
