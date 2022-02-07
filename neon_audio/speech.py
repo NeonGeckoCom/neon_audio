@@ -23,12 +23,12 @@ import time
 
 from threading import Lock
 from typing import Optional
-from neon_utils.logger import LOG
-from ovos_utils.signal import check_for_signal
 from mycroft_bus_client import Message, MessageBusClient
-
+from neon_utils.logger import LOG
 from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
 from neon_utils.metrics_utils import Stopwatch, report_metric
+from neon_utils.signal_utils import check_for_signal
+
 from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException

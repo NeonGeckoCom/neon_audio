@@ -26,9 +26,9 @@ from neon_utils.logger import LOG
 
 from neon_audio import speech
 from neon_audio.audioservice import AudioService
-
+from neon_utils.signal_utils import check_for_signal
 from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap
-from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
+from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 
 
 def on_ready():
@@ -61,6 +61,11 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
     status = ProcessStatus('audio', bus, callbacks)
     try:
         speech.init(bus, config)
+
+        from neon_utils.signal_utils import init_signal_bus, init_signal_handlers
+        init_signal_bus(bus)
+        init_signal_handlers()
+
         # Connect audio service instance to message bus
         if get_neon_device_type() == 'server':
             audio = None
