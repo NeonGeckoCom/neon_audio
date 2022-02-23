@@ -1,4 +1,5 @@
 neon-tts-plugin-mozilla_remote
-neon-messagebus @ git+https://github.com/NeonDaniel/neon_messagebus@FEAT_LoosenOvosCoreDependencySpec
+neon-messagebus>=0.0.2a6
+# TODO: Update this to a stable release spec
 pytest
 mock~=4.0
