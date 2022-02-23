@@ -40,16 +40,16 @@ from ovos_plugin_manager.tts import load_tts_plugin
 from neon_utils.logger import LOG
 from neon_utils.metrics_utils import Stopwatch
 from ovos_utils import resolve_resource_file
-
+from ovos_utils.sound import play_wav, play_mp3
 from neon_utils.signal_utils import create_signal, check_for_signal, init_signal_bus
+from ovos_plugin_manager.utils.tts_cache import get_cache_directory, curate_cache
+
 
 try:
     from neon_core.language import DetectorFactory, TranslatorFactory
 except ImportError:
     LOG.error("Language Detector and Translator not available")
     DetectorFactory, TranslatorFactory = None, None
-
-from mycroft.util import play_wav, play_mp3, get_cache_directory, curate_cache
 
 
 _TTS_ENV = deepcopy(os.environ)
