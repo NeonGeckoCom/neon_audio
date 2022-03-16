@@ -42,6 +42,7 @@ from neon_utils.metrics_utils import Stopwatch
 from ovos_utils import resolve_resource_file
 from ovos_utils.sound import play_wav, play_mp3
 from neon_utils.signal_utils import create_signal, check_for_signal, init_signal_bus
+from neon_utils.file_utils import encode_file_to_base64_string
 from ovos_plugin_manager.utils.tts_cache import get_cache_directory, curate_cache
 
 
@@ -407,7 +408,7 @@ class TTS(metaclass=ABCMeta):
             """
             profiles = msg.context.get("nick_profiles")
             tts_name = "Neon"
-
+            default_gender = "female"
             tts_reqs = []
             # Get all of our language parameters
             try:
@@ -427,8 +428,8 @@ class TTS(metaclass=ABCMeta):
                     for nickname in profiles:
                         chat_user = profiles.get(nickname, None)
                         user_lang = chat_user.get("speech", chat_user)
-                        language = user_lang.get('tts_language', 'en-us')
-                        gender = user_lang.get('tts_gender', 'female')
+                        language = user_lang.get('tts_language') or 'en-us'
+                        gender = user_lang.get('tts_gender') or default_gender
                         LOG.debug(f"{nickname} requesting {gender} {language}")
                         data = {"speaker": tts_name,
                                 "language": language,
@@ -449,12 +450,15 @@ class TTS(metaclass=ABCMeta):
                                      })
 
                     if user_config["secondary_tts_language"] and \
-                            user_config["secondary_tts_language"] != user_config["tts_language"]:
-                        tts_reqs.append({"speaker": tts_name,
-                                         "language": user_config["secondary_tts_language"],
-                                         "gender": user_config["secondary_tts_gender"],
-                                         "voice": user_config["secondary_neon_voice"]
-                                         })
+                            user_config["secondary_tts_language"] != \
+                            user_config["tts_language"]:
+                        tts_reqs.append(
+                            {"speaker": tts_name,
+                             "language": user_config["secondary_tts_language"],
+                             "gender": user_config["secondary_tts_gender"] or
+                                       default_gender,
+                             "voice": user_config["secondary_neon_voice"]
+                             })
             except Exception as x:
                 LOG.error(x)
 
@@ -541,14 +545,20 @@ class TTS(metaclass=ABCMeta):
                     responses[lang] = {"sentence": translated_sentence}
                 if os.path.isfile(file):  # Based on <speak> tags, this may not exist
                     responses[lang][request["gender"]] = file
+                    # Include audio data for MQ requests
+                    if message.context.get("klat_data"):
+                        responses[lang].setdefault("audio", dict())
+                        responses[lang]["audio"][request["gender"]] = \
+                            encode_file_to_base64_string(file)
                     response_audio_files.append(file)
 
             # Server execution - send mycroft's speech (wav file) over to the chat_server
             if message.context.get("klat_data"):
                 LOG.debug(f"responses={responses}")
-                self.bus.emit(message.forward("klat.response", {"responses": responses,
-                                                                "speaker": message.data.get("speaker")}))
-                # self.bus.wait_for_response
+                self.bus.emit(message.forward(
+                    "klat.response",
+                    {"responses": responses,
+                     "speaker": message.data.get("speaker")}))
             # API Call
             elif message.msg_type in ["neon.get_tts"]:
                 return responses
