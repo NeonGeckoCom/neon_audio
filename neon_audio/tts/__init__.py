@@ -408,7 +408,8 @@ class TTS(metaclass=ABCMeta):
             :param msg: Message associated with request
             :return: List of TTS dict data
             """
-            profiles = msg.context.get("nick_profiles")
+            profiles = msg.context.get("user_profiles") or \
+                msg.context.get("nick_profiles")
             tts_name = "Neon"
             default_gender = "female"
             tts_reqs = []
@@ -427,22 +428,37 @@ class TTS(metaclass=ABCMeta):
                 # If multiple profiles attached to message, get TTS for all
                 elif profiles:
                     LOG.info(f"Got profiles: {profiles}")
-                    for nickname in profiles:
-                        chat_user = profiles.get(nickname, None)
-                        user_lang = chat_user.get("speech", chat_user)
-                        language = user_lang.get('tts_language') or 'en-us'
-                        gender = user_lang.get('tts_gender') or default_gender
-                        LOG.debug(f"{nickname} requesting {gender} {language}")
-                        data = {"speaker": tts_name,
-                                "language": language,
-                                "gender": gender,
-                                "voice": None
-                                }
-                        if data not in tts_reqs:
-                            tts_reqs.append(data)
+                    for profile in profiles:
+                        username = profile.get("user", {}).get("username")
+                        lang_prefs = profile.get("speech") or dict()
+                        language = lang_prefs.get('tts_language') or 'en-us'
+                        second_lang = lang_prefs.get('secondary_tts_language') or language
+                        gender = lang_prefs.get('tts_gender') or default_gender
+                        LOG.debug(f"{username} requesting {gender} {language}")
+                        primary = {"speaker": tts_name,
+                                   "language": language,
+                                   "gender": gender,
+                                   "voice": None
+                                   }
+                        if second_lang != language:
+                            second_gender = \
+                                lang_prefs.get("secondary_tts_gender") or \
+                                gender
+                            secondary = {"speaker": tts_name,
+                                         "language": second_lang,
+                                         "gender": second_gender,
+                                         "voice": None
+                                         }
+                        else:
+                            secondary = None
+                        if primary not in tts_reqs:
+                            tts_reqs.append(primary)
+                        if secondary and secondary not in tts_reqs:
+                            tts_reqs.append(secondary)
 
                 # General non-server response, use yml configuration
                 else:
+                    LOG.warning("No profile information with request")
                     user_config = get_neon_user_config()["speech"]
 
                     tts_reqs.append({"speaker": tts_name,
@@ -458,7 +474,7 @@ class TTS(metaclass=ABCMeta):
                             {"speaker": tts_name,
                              "language": user_config["secondary_tts_language"],
                              "gender": user_config["secondary_tts_gender"] or
-                                       default_gender,
+                             default_gender,
                              "voice": user_config["secondary_neon_voice"]
                              })
             except Exception as x:
