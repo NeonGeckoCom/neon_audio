@@ -32,6 +32,7 @@ from threading import Thread
 from time import time
 from queue import Queue, Empty
 from os.path import dirname, exists, isdir, join
+from typing import Optional
 
 from neon_utils.configuration_utils import get_neon_lang_config, get_neon_audio_config,\
     get_neon_user_config, get_neon_local_config
@@ -130,9 +131,9 @@ class PlaybackThread(Thread):
                 stopwatch = Stopwatch()
                 with stopwatch:
                     if snd_type == 'wav':
-                        self.p = play_wav(data, environment=self.pulse_env)
+                        self.p = play_wav(data)
                     elif snd_type == 'mp3':
-                        self.p = play_mp3(data, environment=self.pulse_env)
+                        self.p = play_mp3(data)
                     if visemes:
                         self.show_visemes(visemes)
                     if self.p:
@@ -399,7 +400,8 @@ class TTS(metaclass=ABCMeta):
             # Re-raise to allow the Exception to be handled externally as well.
             raise
 
-    def _execute(self, sentence: str, ident: str, listen: bool, message: Message):
+    def _execute(self, sentence: str, ident: str, listen: bool,
+                 message: Message) -> Optional[dict]:
         def _get_requested_tts_languages(msg) -> list:
             """
             Builds a list of the requested TTS for a given spoken response
@@ -422,7 +424,7 @@ class TTS(metaclass=ABCMeta):
                                      })
                     LOG.debug(f">>> speaker={speaker}")
 
-                # If multiple profiles attached to message, get TTS for all of them
+                # If multiple profiles attached to message, get TTS for all
                 elif profiles:
                     LOG.info(f"Got profiles: {profiles}")
                     for nickname in profiles:
@@ -469,7 +471,6 @@ class TTS(metaclass=ABCMeta):
                              "gender": "female"
                              }]
 
-            # TODO: Associate voice with cache here somehow? (would be a per-TTS engine set) DM
             LOG.debug(f"Got {len(tts_reqs)} TTS Voice Requests")
             return tts_reqs
 
@@ -501,7 +502,8 @@ class TTS(metaclass=ABCMeta):
             for request in tts_requested:
                 # TODO: This is the cache dir that should be used everywhere DM
                 file = os.path.join(self.cache_dir, "tts", self.tts_name,
-                                    request["language"], request["gender"], key + '.' + self.audio_ext)
+                                    request["language"], request["gender"],
+                                    key + '.' + self.audio_ext)
                 lang = request["language"]
                 translated_sentence = None
                 try:
@@ -515,9 +517,11 @@ class TTS(metaclass=ABCMeta):
                         phonemes = self.load_phonemes(key)
                         LOG.debug(phonemes)
 
-                        # Get cached translation (remove audio if no corresponding translation)
+                        # Get cached translation
+                        # (remove audio if no corresponding translation)
                         if f"{lang}{key}" in self.cached_translations:
-                            translated_sentence = self.cached_translations[f"{lang}{key}"]
+                            translated_sentence = \
+                                self.cached_translations[f"{lang}{key}"]
                         else:
                             LOG.error("cache error! Removing audio file")
                             os.remove(file)
@@ -525,25 +529,32 @@ class TTS(metaclass=ABCMeta):
                     # If no file cached or cache error was encountered, get tts
                     if not translated_sentence:
                         LOG.debug(f"{lang}{key} not cached")
-                        if not lang.split("-", 1)[0] == "en" and self.translator:  # TODO: Internal lang DM
-                            translated_sentence = self.translator.translate(sentence, lang, "en")
+                        # TODO: Use sentence lang DM
+                        if not lang.split("-", 1)[0] == "en" and \
+                                self.translator:
+                            translated_sentence = \
+                                self.translator.translate(sentence, lang, "en")
                             LOG.info(translated_sentence)
                         else:
                             translated_sentence = sentence
-                        file, phonemes = self.get_tts(translated_sentence, file, request)
+                        file, phonemes = self.get_tts(translated_sentence,
+                                                      file, request)
                         # Update cache for next time
-                        self.cached_translations[f"{lang}{key}"] = translated_sentence
+                        self.cached_translations[f"{lang}{key}"] = \
+                            translated_sentence
                         LOG.debug(f">>>Cache Updated! ({file})<<<")
                         _update_pickle()
                 except Exception as e:
-                    # Remove audio file if any exception occurs, this forces re-translation/cache next time
+                    # Remove audio file if any exception occurs
+                    # this forces re-translation/cache next time
                     LOG.error(e)
                     if os.path.exists(file):
                         os.remove(file)
 
                 if not responses.get(lang):
                     responses[lang] = {"sentence": translated_sentence}
-                if os.path.isfile(file):  # Based on <speak> tags, this may not exist
+                if os.path.isfile(file):
+                    # Based on <speak> tags, this may not exist
                     responses[lang][request["gender"]] = file
                     # Include audio data for MQ requests
                     if message.context.get("klat_data"):
@@ -552,7 +563,7 @@ class TTS(metaclass=ABCMeta):
                             encode_file_to_base64_string(file)
                     response_audio_files.append(file)
 
-            # Server execution - send mycroft's speech (wav file) over to the chat_server
+            # If we have `klat_data`, emit this as a response
             if message.context.get("klat_data"):
                 LOG.debug(f"responses={responses}")
                 self.bus.emit(message.forward(
@@ -567,9 +578,11 @@ class TTS(metaclass=ABCMeta):
                 if response_audio_files:
                     vis = self.viseme(phonemes) if phonemes else phonemes
                     for response in response_audio_files:
-                        self.queue.put((self.audio_ext, str(response), vis, ident, listen))
+                        self.queue.put((self.audio_ext, str(response),
+                                        vis, ident, listen))
                 else:
-                    check_for_signal("isSpeaking", config={"ipc_path": _get_ipc_dir()})
+                    check_for_signal("isSpeaking",
+                                     config={"ipc_path": _get_ipc_dir()})
 
     def viseme(self, phonemes):
         """Create visemes from phonemes. Needs to be implemented for all
