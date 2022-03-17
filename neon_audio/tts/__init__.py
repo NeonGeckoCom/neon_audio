@@ -45,13 +45,9 @@ from ovos_utils.sound import play_wav, play_mp3
 from neon_utils.signal_utils import create_signal, check_for_signal, init_signal_bus
 from neon_utils.file_utils import encode_file_to_base64_string
 from ovos_plugin_manager.utils.tts_cache import get_cache_directory, curate_cache
+from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
+# from neon_core.language import DetectorFactory, TranslatorFactory
 
-
-try:
-    from neon_core.language import DetectorFactory, TranslatorFactory
-except ImportError:
-    LOG.error("Language Detector and Translator not available")
-    DetectorFactory, TranslatorFactory = None, None
 
 
 _TTS_ENV = deepcopy(os.environ)
@@ -200,8 +196,18 @@ class TTS(metaclass=ABCMeta):
         self.bus = None  # initalized in "init" step
 
         self.language_config = get_neon_lang_config()
-        self.lang_detector = DetectorFactory.create() if DetectorFactory else None
-        self.translator = TranslatorFactory.create() if DetectorFactory else None
+        try:
+            self.lang_detector = OVOSLangDetectionFactory.create(
+                self.language_config)
+            self.translator = OVOSLangTranslationFactory.create(
+                self.language_config)
+        except ValueError as e:
+            # Probably missing plugin
+            LOG.error(e)
+            LOG.error("TTS translation services unavailable")
+            self.lang_detector = None
+            self.translator = None
+
         self.lang = lang or self.language_config.get("user", "en-us")
 
         self.config = config
