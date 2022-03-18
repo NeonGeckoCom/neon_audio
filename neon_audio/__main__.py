@@ -20,7 +20,7 @@
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from neon_utils.messagebus_utils import get_messagebus
-from neon_utils.configuration_utils import get_neon_device_type,\
+from neon_utils.configuration_utils import get_neon_device_type, \
     init_config_dir
 from neon_utils.logger import LOG
 
@@ -53,8 +53,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
     """
     init_config_dir()
     reset_sigint_handler()
-    check_for_signal("isSpeaking")
-    # whitelist = ['mycroft.audio.service']
+
     bus = get_messagebus()
     callbacks = StatusCallbackMap(on_ready=ready_hook, on_error=error_hook,
                                   on_stopping=stopping_hook)
@@ -65,6 +64,8 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
         from neon_utils.signal_utils import init_signal_bus, init_signal_handlers
         init_signal_bus(bus)
         init_signal_handlers()
+
+        check_for_signal("isSpeaking")
 
         # Connect audio service instance to message bus
         if get_neon_device_type() == 'server':

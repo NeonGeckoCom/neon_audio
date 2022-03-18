@@ -35,5 +35,5 @@ RUN pip install wheel && \
 
 COPY docker_overlay/asoundrc /root/.asoundrc
 COPY docker_overlay/mycroft.conf /root/.mycroft/mycroft.conf
-
+# TODO: Update overlay with ovos.conf and neon.conf
 CMD ["neon_audio_client"]
