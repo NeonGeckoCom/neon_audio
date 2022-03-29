@@ -133,8 +133,13 @@ class WrappedTTS(TTS):
 
         base_engine.language_config = language_config
         base_engine.lang = base_engine.lang or language_config.get("user", "en-us")
-        base_engine.lang_detector = OVOSLangDetectionFactory.create(language_config)
-        base_engine.translator = OVOSLangTranslationFactory.create(language_config)
+        try:
+            base_engine.lang_detector = OVOSLangDetectionFactory.create(language_config)
+            base_engine.translator = OVOSLangTranslationFactory.create(language_config)
+        except ValueError as e:
+            LOG.error(e)
+            base_engine.lang_detector = None
+            base_engine.translator = None
 
         # TODO should cache be handled directly in each individual plugin?
         #   would also allow to do it per engine which can be advantageous
