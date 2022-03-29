@@ -24,14 +24,19 @@ import shutil
 import sys
 import unittest
 
+from time import time
+from os.path import join, dirname
 from threading import Event
 from mock import Mock
+from mycroft_bus_client import Message
+from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
 from neon_utils.signal_utils import check_for_signal
+from neon_utils.configuration_utils import get_neon_local_config
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from neon_audio.tts import *
+from neon_audio.tts import WrappedTTS
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from test_objects import DummyTTS, DummyTTSValidator
@@ -42,14 +47,14 @@ class TTSBaseClassTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.test_cache_dir = join(dirname(__file__), "test_cache")
         cls.test_conf_dir = join(dirname(__file__), "config")
-        os.makedirs(cls.test_conf_dir)
+        os.makedirs(cls.test_conf_dir, exist_ok=True)
         os.environ["NEON_CONFIG_PATH"] = cls.test_conf_dir
         config = get_neon_local_config()
         config["dirVars"]["cacheDir"] = cls.test_cache_dir
         config.write_changes()
-        cls.config = dict()
+        cls.config = {"key": "val"}
         cls.lang = "en-us"
-        cls.tts = DummyTTS(cls.lang, cls.config)
+        cls.tts = WrappedTTS(DummyTTS, cls.lang, cls.config)
         bus = FakeBus()
         bus.connected_event = Event()
         bus.connected_event.set()
@@ -65,6 +70,9 @@ class TTSBaseClassTests(unittest.TestCase):
         os.environ.pop("NEON_CONFIG_PATH")
 
     def test_class_init(self):
+        from ovos_plugin_manager.templates.tts import TTS
+        # self.assertIsInstance(self.tts, WrappedTTS)
+        self.assertIsInstance(self.tts, TTS)
         self.assertIsInstance(self.tts.bus, FakeBus)
         self.assertIsInstance(self.tts.language_config, dict)
         # TODO: Fix import errors in unit tests
@@ -77,7 +85,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertFalse(self.tts.phonetic_spelling)
         self.assertEqual(self.tts.ssml_tags, ["speak"])
 
-        self.assertIsNone(self.tts.voice)
+        self.assertEqual(self.tts.voice, "default")
         self.assertTrue(self.tts.queue.empty())
         self.assertIsInstance(self.tts.playback, PlaybackThread)
 
@@ -86,7 +94,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertIsInstance(self.tts.keys, dict)
 
         self.assertTrue(os.path.isdir(self.tts.cache_dir))
-        self.assertTrue(os.path.isfile(self.tts.translation_cache))
+        # self.assertTrue(os.path.isfile(self.tts.translation_cache))
         self.assertIsInstance(self.tts.cached_translations, dict)
 
     def test_load_spellings(self):
@@ -122,10 +130,19 @@ class TTSBaseClassTests(unittest.TestCase):
         self.tts._execute = Mock()
         self.tts.execute(sentence, ident)
         self.assertTrue(check_for_signal("isSpeaking"))
-        self.tts._execute.assert_called_once_with(sentence, ident, False, None)
+        self.tts._execute.assert_called_once_with(sentence, ident, False)
         self.tts._execute = default_execute
 
-        # TODO: Test tts._execute
+        default_get_multiple_tts = self.tts._get_multiple_tts
+        self.tts._get_multiple_tts = Mock(return_value=list())
+        message = Message("test")
+        self.tts.execute(sentence, ident, message=message)
+        self.tts._get_multiple_tts.assert_called_once_with(message)
+        self.tts._get_multiple_tts = default_get_multiple_tts
+
+    def test_get_multiple_tts(self):
+        # TODO
+        pass
 
     def test_viseme(self):
         self.assertIsNone(self.tts.viseme(""))
@@ -141,8 +158,6 @@ class TTSBaseClassTests(unittest.TestCase):
     def test_load_phonemes(self):
         # TODO
         pass
-
-
 
     def test_validator_valid(self):
         self.assertTrue(self.tts.validator.validate_lang())

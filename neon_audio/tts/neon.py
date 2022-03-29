@@ -18,14 +18,18 @@
 # SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import os
 from os.path import expanduser, dirname, join
 
 from json_database import JsonStorageXDG, JsonStorage
 from mycroft.util.log import LOG
-from mycroft_bus_client.message import dig_for_message
+from mycroft_bus_client.message import dig_for_message, Message
 from neon_utils.configuration_utils import get_neon_lang_config, get_neon_user_config, get_neon_local_config
 from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
-from ovos_plugin_manager.tts import TTS
+from ovos_plugin_manager.templates.tts import TTS
+
+from neon_utils.message_utils import resolve_message
 
 
 def get_requested_tts_languages(msg) -> list:
@@ -142,11 +146,15 @@ class WrappedTTS(TTS):
             cached_translations = JsonStorageXDG("tx_cache.json", subfolder="neon")
             cache_dir = dirname(cached_translations.path)
 
+        os.makedirs(cache_dir, exist_ok=True)
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
         return base_engine
 
-    def _get_multiple_tts(self, message, **kwargs):
+    def _get_multiple_tts(self, message, **kwargs) -> dict:
+        """
+        Get tts responses based on message context
+        """
         tts_requested = get_requested_tts_languages(message)
         LOG.debug(f"tts_requested={tts_requested}")
         sentence = message.data["text"]
@@ -155,7 +163,7 @@ class WrappedTTS(TTS):
         for request in tts_requested:
             # tts in utterance lang
             lang = kwargs["lang"] = request["language"]
-            wav_file, phonemes = self._get_tts(sentence, **kwargs)
+            wav_file, phonemes = self.get_tts(sentence, **kwargs)
             responses[lang] = {"sentence": sentence,
                                "translated": False,
                                "phonemes": phonemes,
@@ -175,7 +183,7 @@ class WrappedTTS(TTS):
                     self.cached_translations.store()
                 tx_kwargs = dict(kwargs)
                 tx_kwargs["lang"] = self.lang
-                wav_file, phonemes = self._get_tts(tx_sentence, **tx_kwargs)
+                wav_file, phonemes = self.get_tts(tx_sentence, **tx_kwargs)
                 responses[self.lang] = {"sentence": tx_sentence,
                                         "translated": True,
                                         "phonemes": phonemes,
@@ -184,7 +192,9 @@ class WrappedTTS(TTS):
 
         return responses
 
-    def execute(self, sentence, ident=None, listen=False, **kwargs):
+    @resolve_message
+    def execute(self, sentence: str, ident: str = None, listen: bool = False,
+                message: Message = None, **kwargs):
         """Convert sentence to speech, preprocessing out unsupported ssml
 
         The method caches results if possible using the hash of the
@@ -195,9 +205,10 @@ class WrappedTTS(TTS):
             ident: (str) Id reference to current interaction
             listen: (bool) True if listen should be triggered at the end
                     of the utterance.
-            kwargs: (dict) optional keyword arguments to be passed to TTS engine get_tts method
+            message: (Message) Message associated with request
+            kwargs: (dict) optional keyword arguments to be passed to
+            TTS engine get_tts method
         """
-        message = kwargs.get("message") or dig_for_message()
         if message:
             responses = self._get_multiple_tts(message, **kwargs)
             LOG.debug(f"responses={responses}")
@@ -218,4 +229,5 @@ class WrappedTTS(TTS):
                     self.queue.put((self.audio_ext, wav_file, vis, ident, listen))
                     self.handle_metric({"metric_type": "tts.queued"})
         else:
-            super().execute(sentence, ident, listen, **kwargs)
+            assert isinstance(self, TTS)
+            TTS.execute(self, sentence, ident, listen, **kwargs)
