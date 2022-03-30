@@ -30,6 +30,7 @@ from neon_utils.configuration_utils import get_neon_lang_config, get_neon_user_c
 from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
 from ovos_plugin_manager.templates.tts import TTS
 
+from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
 
 
@@ -117,6 +118,8 @@ class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
+        # TODO: Below method is only to bridge compatibility
+        base_engine._get_tts = cls._get_tts
         return cls._init_neon(base_engine, *args, **kwargs)
 
     @staticmethod
@@ -157,6 +160,20 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
         return base_engine
 
+    def _get_tts(self, sentence: str, request: dict, **kwargs):
+        if "speaker" in inspect.signature(self.get_tts).parameters:
+            LOG.info("Legacy Neon TTS signature found")
+            key = str(hashlib.md5(
+                sentence.encode('utf-8', 'ignore')).hexdigest())
+            file = os.path.join(self.cache_dir, "tts", self.tts_name,
+                                request["language"], request["gender"],
+                                key + '.' + self.audio_ext)
+            os.makedirs(dirname(file), exist_ok=True)
+            return self.get_tts(sentence, file, request)
+        else:
+            # TODO: Handle language, gender, voice kwargs here
+            return self.get_tts(sentence, **kwargs)
+
     def get_multiple_tts(self, message, **kwargs) -> dict:
         """
         Get tts responses based on message context
@@ -169,45 +186,48 @@ class WrappedTTS(TTS):
         for request in tts_requested:
             # tts in utterance lang
             lang = kwargs["lang"] = request["language"]
-            LOG.info(inspect.signature(self.get_tts).parameters)
-            if "speaker" in inspect.signature(self.get_tts).parameters:
-                LOG.info("Legacy Neon TTS signature found")
-                key = str(hashlib.md5(
-                    sentence.encode('utf-8', 'ignore')).hexdigest())
-                file = os.path.join(self.cache_dir, "tts", self.tts_name,
-                                    request["language"], request["gender"],
-                                    key + '.' + self.audio_ext)
-                os.makedirs(dirname(file), exist_ok=True)
-                wav_file, phonemes = self.get_tts(sentence, file, request)
-            else:
-                # TODO: Handle language, gender, voice kwargs here
-                wav_file, phonemes = self.get_tts(sentence, **kwargs)
-            responses[lang] = {"sentence": sentence,
-                               "translated": False,
-                               "phonemes": phonemes,
-                               "gender": request["gender"],
-                               request["gender"]: wav_file}
+            # wav_file, phonemes = self._get_tts(sentence, request, **kwargs)
+            # responses[lang] = {"sentence": sentence,
+            #                    "translated": False,
+            #                    "phonemes": phonemes,
+            #                    "gender": request["gender"],
+            #                    request["gender"]: wav_file}
 
             # tts in translated lang (internal/self.lang)
             if lang.split("-")[0] != self.lang.split("-")[0]:
-                tx_sentence = None
-                if lang in self.cached_translations:
-                    tx_sentence = self.cached_translations[lang].get(sentence)
-                else:
-                    self.cached_translations[lang] = {}
+                self.cached_translations.setdefault(lang, {})
+
+                tx_sentence = self.cached_translations[lang].get(sentence)
                 if not tx_sentence:
-                    tx_sentence = self.translator.translate(sentence, lang, self.lang)
+                    tx_sentence = self.translator.translate(sentence, lang,
+                                                            self.lang)
                     self.cached_translations[lang][sentence] = tx_sentence
                     self.cached_translations.store()
-                tx_kwargs = dict(kwargs)
-                tx_kwargs["lang"] = self.lang
-                wav_file, phonemes = self.get_tts(tx_sentence, **tx_kwargs)
-                responses[self.lang] = {"sentence": tx_sentence,
-                                        "translated": True,
-                                        "phonemes": phonemes,
-                                        "gender": request["gender"],
-                                        request["gender"]: wav_file}
+                LOG.info(f"Got translated sentence: {tx_sentence}")
+                # tx_kwargs = dict(kwargs)
+                # tx_kwargs["lang"] = self.lang
+                # wav_file, phonemes = self._get_tts(tx_sentence, request,
+                #                                    **tx_kwargs)
+            else:
+                tx_sentence = sentence
+            wav_file, phonemes = self._get_tts(tx_sentence, request, **kwargs)
 
+            # If this is the first response, populate translation and phonemes
+            if not responses.get(lang):
+                responses[lang] = {"sentence": tx_sentence,
+                                   "translated": tx_sentence != sentence,
+                                   "phonemes": phonemes}
+
+            # Append the generated audio from this request
+            if os.path.isfile(wav_file):
+                responses[lang][request["gender"]] = wav_file
+                # If this is a remote request, encode audio in the response
+                if message.context.get("klat_data"):
+                    responses[lang].setdefault("audio", {})
+                    responses[lang]["audio"][request["gender"]] = \
+                        encode_file_to_base64_string(wav_file)
+            else:
+                LOG.warning(f"No audio generated for text: {tx_sentence}")
         return responses
 
     @resolve_message
@@ -228,6 +248,8 @@ class WrappedTTS(TTS):
             TTS engine get_tts method
         """
         if message:
+            # TODO: Should sentence and ident be added to message context? DM
+            message.data["text"] = sentence
             responses = self.get_multiple_tts(message, **kwargs)
             LOG.debug(f"responses={responses}")
 

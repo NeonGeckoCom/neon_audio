@@ -132,11 +132,10 @@ def mute_and_speak(utterance, message):
 
     try:
         tts.execute(utterance, message.context['ident'], listen, message)
-    except RemoteTTSTimeoutException as e:
-
+    except RemoteTTSTimeoutException:
         mimic_fallback_tts(utterance, message.context['ident'], message)
     except Exception as e:
-        LOG.error(e)
+        LOG.exception(e)
         if MimicTTSPlugin:
             try:
                 mimic_fallback_tts(utterance, message.context['ident'], message)
