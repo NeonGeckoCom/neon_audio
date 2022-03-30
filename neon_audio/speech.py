@@ -30,18 +30,17 @@ from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
 from ovos_plugin_manager.tts import TTS
 from ovos_utils.log import LOG
 from ovos_utils.signal import check_for_signal
-
-from neon_audio.tts import TTSFactory
+from neon_utils.metrics_utils import Stopwatch, report_metric
+from neon_audio.tts import TTSFactory, WrappedTTS
 
 try:
     from ovos_tts_plugin_mimic import MimicTTSPlugin
 except ImportError:
     MimicTTSPlugin = None
-from mycroft.metrics import report_timing, Stopwatch
 
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
 config: Optional[NGIConfig] = None
-tts: Optional[TTS] = None
+tts: Optional[WrappedTTS] = None
 mimic_fallback_obj: Optional[TTS] = None
 tts_hash = None
 lock = Lock()
@@ -65,12 +64,12 @@ def handle_get_tts(message):
             bus.emit(message.reply(ident, data={"error": f"text is not a str: {text}"}))
             return
         try:
-            responses = tts._get_multiple_tts(message)
+            responses = tts.get_multiple_tts(message)
             # TODO: Consider including audio bytes here in case path is inaccessible DM
             # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path}}
             bus.emit(message.reply(ident, data=responses))
         except Exception as e:
-            LOG.error(e)
+            LOG.exception(e)
             bus.emit(message.reply(ident, data={"error": repr(e)}))
     else:
         bus.emit(message.reply(ident, data={"error": "No text provided."}))

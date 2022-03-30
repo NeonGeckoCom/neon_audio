@@ -18,7 +18,8 @@
 # SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+import hashlib
+import inspect
 import os
 from os.path import expanduser, dirname, join
 
@@ -115,7 +116,7 @@ def get_requested_tts_languages(msg) -> list:
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
         base_engine.execute = cls.execute
-        base_engine._get_multiple_tts = cls._get_multiple_tts
+        base_engine.get_multiple_tts = cls.get_multiple_tts
         return cls._init_neon(base_engine, *args, **kwargs)
 
     @staticmethod
@@ -156,7 +157,7 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
         return base_engine
 
-    def _get_multiple_tts(self, message, **kwargs) -> dict:
+    def get_multiple_tts(self, message, **kwargs) -> dict:
         """
         Get tts responses based on message context
         """
@@ -168,7 +169,17 @@ class WrappedTTS(TTS):
         for request in tts_requested:
             # tts in utterance lang
             lang = kwargs["lang"] = request["language"]
-            wav_file, phonemes = self.get_tts(sentence, **kwargs)
+            LOG.info(inspect.signature(self.get_tts).parameters)
+            if "speaker" in inspect.signature(self.get_tts).parameters:
+                LOG.info("Legacy Neon TTS signature found")
+                key = str(hashlib.md5(
+                    sentence.encode('utf-8', 'ignore')).hexdigest())
+                file = os.path.join(self.cache_dir, "tts", self.tts_name,
+                                    request["language"], request["gender"],
+                                    key + '.' + self.audio_ext)
+                wav_file, phonemes = self.get_tts(sentence, file, request)
+            else:
+                wav_file, phonemes = self.get_tts(sentence, **kwargs)
             responses[lang] = {"sentence": sentence,
                                "translated": False,
                                "phonemes": phonemes,
