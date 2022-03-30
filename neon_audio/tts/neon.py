@@ -184,16 +184,8 @@ class WrappedTTS(TTS):
         sentence = self.validate_ssml(sentence)
         responses = {}
         for request in tts_requested:
-            # tts in utterance lang
             lang = kwargs["lang"] = request["language"]
-            # wav_file, phonemes = self._get_tts(sentence, request, **kwargs)
-            # responses[lang] = {"sentence": sentence,
-            #                    "translated": False,
-            #                    "phonemes": phonemes,
-            #                    "gender": request["gender"],
-            #                    request["gender"]: wav_file}
-
-            # tts in translated lang (internal/self.lang)
+            # Check if requested tts lang matches internal (text) lang
             if lang.split("-")[0] != self.lang.split("-")[0]:
                 self.cached_translations.setdefault(lang, {})
 
@@ -204,10 +196,6 @@ class WrappedTTS(TTS):
                     self.cached_translations[lang][sentence] = tx_sentence
                     self.cached_translations.store()
                 LOG.info(f"Got translated sentence: {tx_sentence}")
-                # tx_kwargs = dict(kwargs)
-                # tx_kwargs["lang"] = self.lang
-                # wav_file, phonemes = self._get_tts(tx_sentence, request,
-                #                                    **tx_kwargs)
             else:
                 tx_sentence = sentence
             wav_file, phonemes = self._get_tts(tx_sentence, request, **kwargs)
