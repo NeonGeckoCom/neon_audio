@@ -133,12 +133,12 @@ class TTSBaseClassTests(unittest.TestCase):
         self.tts._execute.assert_called_once_with(sentence, ident, False)
         self.tts._execute = default_execute
 
-        default_get_multiple_tts = self.tts._get_multiple_tts
-        self.tts._get_multiple_tts = Mock(return_value=list())
+        default_get_multiple_tts = self.tts.get_multiple_tts
+        self.tts.get_multiple_tts = Mock(return_value=list())
         message = Message("test")
         self.tts.execute(sentence, ident, message=message)
-        self.tts._get_multiple_tts.assert_called_once_with(message)
-        self.tts._get_multiple_tts = default_get_multiple_tts
+        self.tts.get_multiple_tts.assert_called_once_with(message)
+        self.tts.get_multiple_tts = default_get_multiple_tts
 
     def test_get_multiple_tts(self):
         # TODO

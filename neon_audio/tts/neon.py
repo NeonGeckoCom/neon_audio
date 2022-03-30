@@ -226,7 +226,7 @@ class WrappedTTS(TTS):
             TTS engine get_tts method
         """
         if message:
-            responses = self._get_multiple_tts(message, **kwargs)
+            responses = self.get_multiple_tts(message, **kwargs)
             LOG.debug(f"responses={responses}")
 
             # TODO dedicated klat handler/plugin
