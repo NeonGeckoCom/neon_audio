@@ -127,7 +127,10 @@ def mute_and_speak(utterance, message):
         tts.playback.join()
         # Create new tts instance
         tts = TTSFactory.create(config)
-        tts.init(bus)
+        try:
+            tts.init(bus)
+        except RuntimeError as e:
+            LOG.warning(e)
         tts_hash = hash(str(config.get('tts', '')))
 
     try:

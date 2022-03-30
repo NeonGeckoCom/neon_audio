@@ -216,11 +216,13 @@ class WrappedTTS(TTS):
             if not responses.get(lang):
                 responses[lang] = {"sentence": tx_sentence,
                                    "translated": tx_sentence != sentence,
-                                   "phonemes": phonemes}
+                                   "phonemes": phonemes,
+                                   "genders": list()}
 
             # Append the generated audio from this request
             if os.path.isfile(wav_file):
                 responses[lang][request["gender"]] = wav_file
+                responses[lang]["genders"].append(request["gender"])
                 # If this is a remote request, encode audio in the response
                 if message.context.get("klat_data"):
                     responses[lang].setdefault("audio", {})
@@ -259,15 +261,18 @@ class WrappedTTS(TTS):
                                               {"responses": responses,
                                                "speaker": message.data.get("speaker")}))
             else:
-                # planned feature with the intent in translate.neon: "speak to me in x and y"
-                for r in responses:
+                # Local user has multiple configured languages (or genders)
+                for r in responses.values():
                     # get audio for selected voice gender
-                    wav_file = r[r["gender"]]
-                    # get mouth movement data
-                    vis = self.viseme(r["phonemes"]) if r["phonemes"] else None
-                    # queue for playback
-                    self.queue.put((self.audio_ext, wav_file, vis, ident, listen))
-                    self.handle_metric({"metric_type": "tts.queued"})
+                    for gender in r["genders"]:
+                        wav_file = r[gender]
+                        # get mouth movement data
+                        vis = self.viseme(r["phonemes"]) if r["phonemes"] \
+                            else None
+                        # queue for playback
+                        self.queue.put((self.audio_ext, wav_file, vis, ident,
+                                        listen))
+                        self.handle_metric({"metric_type": "tts.queued"})
         else:
             assert isinstance(self, TTS)
             TTS.execute(self, sentence, ident, listen, **kwargs)
