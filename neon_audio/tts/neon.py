@@ -177,8 +177,10 @@ class WrappedTTS(TTS):
                 file = os.path.join(self.cache_dir, "tts", self.tts_name,
                                     request["language"], request["gender"],
                                     key + '.' + self.audio_ext)
+                os.makedirs(dirname(file), exist_ok=True)
                 wav_file, phonemes = self.get_tts(sentence, file, request)
             else:
+                # TODO: Handle language, gender, voice kwargs here
                 wav_file, phonemes = self.get_tts(sentence, **kwargs)
             responses[lang] = {"sentence": sentence,
                                "translated": False,
