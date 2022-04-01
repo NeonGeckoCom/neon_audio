@@ -46,7 +46,9 @@ class TestAPIMethods(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.bus_thread = NeonBusService(daemonic=True)
-        cls.audio_thread = Process(target=neon_audio_main, kwargs={"config": TEST_CONFIG}, daemon=False)
+        cls.audio_thread = Process(target=neon_audio_main,
+                                   kwargs={"config": TEST_CONFIG},
+                                   daemon=False)
         cls.bus_thread.start()
         cls.audio_thread.start()
         cls.bus = MessageBusClient()
@@ -87,7 +89,8 @@ class TestAPIMethods(unittest.TestCase):
         context = {"client": "tester",
                    "ident": str(time()),
                    "user": "TestRunner"}
-        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": text}, context),
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts",
+                                                      {"text": text}, context),
                                               context["ident"], timeout=60)
         self.assertEqual(tts_resp.context, context)
         responses = tts_resp.data

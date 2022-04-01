@@ -18,17 +18,16 @@
 # SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import get_neon_device_type, \
     init_config_dir
 from neon_utils.logger import LOG
 
 from neon_audio import speech
-from neon_audio.audioservice import AudioService
-from neon_utils.signal_utils import check_for_signal
+from neon_audio.audioservice import NeonAudioService
+
 from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap
-from mycroft.util import reset_sigint_handler, wait_for_exit_signal
+from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
 
 
 def on_ready():
@@ -43,12 +42,23 @@ def on_stopping():
     LOG.info('Audio service is shutting down...')
 
 
-def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, config: dict = None):
+def on_alive():
+    pass
+
+
+def on_started():
+    pass
+
+
+def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
+         alive_hook=on_alive, started_hook=on_started, config: dict = None):
     """
      Main function. Run when file is invoked.
      :param ready_hook: Optional function to call when service is ready
      :param error_hook: Optional function to call when service encounters an error
      :param stopping_hook: Optional function to call when service is stopping
+     :param alive_hook: Optional function to call when service is alive
+     :param started_hook: Optional function to call when service is started
      :param config: dict configuration containing keys: ['tts', 'Audio', 'language']
     """
     init_config_dir()
@@ -56,7 +66,8 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
 
     bus = get_messagebus()
     callbacks = StatusCallbackMap(on_ready=ready_hook, on_error=error_hook,
-                                  on_stopping=stopping_hook)
+                                  on_stopping=stopping_hook,
+                                  on_alive=alive_hook, on_started=started_hook)
     status = ProcessStatus('audio', bus, callbacks)
     try:
         speech.init(bus, config)
@@ -71,8 +82,7 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping, co
         if get_neon_device_type() == 'server':
             audio = None
         else:
-            audio = AudioService(bus, config)  # Connect audio service instance to message bus
-
+            audio = NeonAudioService(bus, config)  # Connect audio service instance to message bus
         status.set_started()
     except Exception as e:
         LOG.error(e)
