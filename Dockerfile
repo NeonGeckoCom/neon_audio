@@ -25,7 +25,12 @@ RUN apt-get update && \
     vlc \
     ffmpeg \
     mimic \
-    gcc
+    gcc \
+    g++ \
+    libsndfile1 \
+    espeak \
+    espeak-ng \
+    git  # TODO: Only for testing plugins
 
 ADD . /neon_audio
 WORKDIR /neon_audio
@@ -33,7 +38,7 @@ WORKDIR /neon_audio
 RUN pip install wheel && \
     pip install .[docker]
 
-COPY docker_overlay/asoundrc /root/.asoundrc
-COPY docker_overlay/mycroft.conf /root/.mycroft/mycroft.conf
-# TODO: Update overlay with ovos.conf and neon.conf
-CMD ["neon_audio_client"]
+COPY docker_overlay/ /
+RUN chmod ugo+x /root/run.sh
+
+CMD ["/root/run.sh"]

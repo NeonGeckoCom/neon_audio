@@ -97,22 +97,12 @@ class TTSBaseClassTests(unittest.TestCase):
         # self.assertTrue(os.path.isfile(self.tts.translation_cache))
         self.assertIsInstance(self.tts.cached_translations, dict)
 
-    def test_load_spellings(self):
-        # TODO: Init a tts object and test load of phonetic_spellings.txt
-        pass
-
-    def test_begin_audio(self):
-        # TODO: bus listener and test call
-        pass
-
-    def test_end_audio(self):
-        # TODO: bus listener and test call
-        pass
-
     def test_modify_tag(self):
+        # TODO: Legacy
         self.assertEqual("test", self.tts.modify_tag("test"))
 
     def test_validate_ssml(self):
+        # TODO: Legacy
         valid_tag_string = "<speak>hello</speak>"
         extra_tags_string = "<speak>hello</br></speak>"
 
@@ -120,6 +110,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertEqual(valid_tag_string, self.tts.validate_ssml(extra_tags_string))
 
     def test_preprocess_sentence(self):
+        # TODO: Legacy
         sentence = "this is a test"
         self.assertEqual(self.tts._preprocess_sentence(sentence), [sentence])
 
@@ -145,19 +136,8 @@ class TTSBaseClassTests(unittest.TestCase):
         pass
 
     def test_viseme(self):
+        # TODO: Legacy
         self.assertIsNone(self.tts.viseme(""))
-
-    def test_clear_cache(self):
-        # TODO: Update method and add tests
-        pass
-
-    def test_save_phonemes(self):
-        # TODO
-        pass
-
-    def test_load_phonemes(self):
-        # TODO
-        pass
 
     def test_validator_valid(self):
         self.assertTrue(self.tts.validator.validate_lang())
@@ -173,12 +153,18 @@ class TTSBaseClassTests(unittest.TestCase):
         tts.shutdown()
 
     def test_get_tts(self):
-        file, phonemes = self.tts.get_tts("test", "file_path", speaker={})
+        file, phonemes = self.tts._get_tts("test", "file_path", speaker={})
         self.assertEqual(file, "file_path")
         self.assertIsNone(phonemes)
 
 
-# TODO: TTSValidator, TTSFactory, PlaybackThread tests DM
+class TTSUtilTests(unittest.TestCase):
+    def test_install_tts_plugin(self):
+        from neon_audio.utils import install_tts_plugin
+        self.assertTrue(install_tts_plugin("coqui"))
+        self.assertTrue(install_tts_plugin("neon-tts-plugin-coqui"))
+        self.assertFalse(install_tts_plugin("neon-tts-plugin-invalid"))
+
 
 if __name__ == '__main__':
     unittest.main()
