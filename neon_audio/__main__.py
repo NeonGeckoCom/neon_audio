@@ -18,16 +18,18 @@
 # SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import get_neon_device_type, \
     init_config_dir
 from neon_utils.logger import LOG
 
+from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap
+
 from neon_audio import speech
 from neon_audio.audioservice import NeonAudioService
 
-from mycroft.util.process_utils import ProcessStatus, StatusCallbackMap
-from mycroft.util import reset_sigint_handler, wait_for_exit_signal, check_for_signal
+from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 
 
 def on_ready():
@@ -72,7 +74,8 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
     try:
         speech.init(bus, config)
 
-        from neon_utils.signal_utils import init_signal_bus, init_signal_handlers
+        from neon_utils.signal_utils import init_signal_bus,\
+            init_signal_handlers, check_for_signal
         init_signal_bus(bus)
         init_signal_handlers()
 

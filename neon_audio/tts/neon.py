@@ -32,6 +32,7 @@ from ovos_plugin_manager.templates.tts import TTS
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
+from neon_utils.signal_utils import create_signal
 
 
 def get_requested_tts_languages(msg) -> list:
@@ -160,16 +161,18 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
         return base_engine
 
-    def _get_tts(self, sentence: str, request: dict, **kwargs):
-        if "speaker" in inspect.signature(self.get_tts).parameters:
+    def _get_tts(self, sentence: str, request: dict = None, **kwargs):
+        if any([x in inspect.signature(self.get_tts).parameters
+                for x in {"speaker", "wav_file"}]):
             LOG.info("Legacy Neon TTS signature found")
             key = str(hashlib.md5(
                 sentence.encode('utf-8', 'ignore')).hexdigest())
-            file = os.path.join(self.cache_dir, "tts", self.tts_name,
-                                request["language"], request["gender"],
-                                key + '.' + self.audio_ext)
+            file = kwargs.get("wav_file") or \
+                os.path.join(self.cache_dir, "tts", self.tts_name,
+                             request["language"], request["gender"],
+                             key + '.' + self.audio_ext)
             os.makedirs(dirname(file), exist_ok=True)
-            return self.get_tts(sentence, file, request)
+            return self.get_tts(sentence, wav_file=file, speaker=request)
         else:
             # TODO: Handle language, gender, voice kwargs here
             return self.get_tts(sentence, **kwargs)
@@ -249,6 +252,7 @@ class WrappedTTS(TTS):
                                               {"responses": responses,
                                                "speaker": message.data.get("speaker")}))
             else:
+                create_signal("isSpeaking")
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
                     # get audio for selected voice gender

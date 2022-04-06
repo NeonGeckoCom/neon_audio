@@ -153,8 +153,10 @@ class TTSBaseClassTests(unittest.TestCase):
         tts.shutdown()
 
     def test_get_tts(self):
-        file, phonemes = self.tts._get_tts("test", "file_path", speaker={})
-        self.assertEqual(file, "file_path")
+        test_file_path = join(dirname(__file__), "test.wav")
+        file, phonemes = self.tts._get_tts("test", wav_file=test_file_path,
+                                           speaker={})
+        self.assertEqual(file, test_file_path)
         self.assertIsNone(phonemes)
 
 
