@@ -28,9 +28,7 @@ RUN apt-get update && \
     gcc \
     g++ \
     libsndfile1 \
-    espeak \
-    espeak-ng \
-    git  # TODO: Only for testing plugins
+    espeak-ng
 
 ADD . /neon_audio
 WORKDIR /neon_audio
