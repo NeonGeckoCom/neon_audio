@@ -30,6 +30,9 @@ RUN apt-get update && \
     libsndfile1 \
     espeak-ng
 
+# Install TTS here to reduce time and layer size
+RUN pip install tts==0.6.1
+
 ADD . /neon_audio
 WORKDIR /neon_audio
 

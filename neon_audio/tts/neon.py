@@ -172,7 +172,15 @@ class WrappedTTS(TTS):
                              request["language"], request["gender"],
                              key + '.' + self.audio_ext)
             os.makedirs(dirname(file), exist_ok=True)
-            return self.get_tts(sentence, wav_file=file, speaker=request)
+            plugin_kwargs = dict()
+            if "speaker" in inspect.signature(self.get_tts).parameters:
+                plugin_kwargs['speaker'] = request
+            if "wav_file" in inspect.signature(self.get_tts).parameters:
+                plugin_kwargs['wav_file'] = file
+            if "output_file" in inspect.signature(self.get_tts).parameters:
+                plugin_kwargs['output_file'] = file
+
+            return self.get_tts(sentence, **plugin_kwargs)
         else:
             # TODO: Handle language, gender, voice kwargs here
             return self.get_tts(sentence, **kwargs)
