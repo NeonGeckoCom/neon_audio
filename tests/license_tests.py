@@ -19,7 +19,7 @@ license_overrides = {
     'sonopy': 'Apache-2.0'
 }
 # explicitly allow these packages that would fail otherwise
-whitelist = []
+whitelist = ["neon-audio"]
 
 # validation flags
 allow_nonfree = False
