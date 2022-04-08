@@ -74,7 +74,8 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'neon_audio_client=neon_audio.__main__:main'
+            'neon_audio_client=neon_audio.__main__:main',
+            'neon-audio=neon_audio.cli:neon_audio_cli'
         ]
     }
 )
