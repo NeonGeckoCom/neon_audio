@@ -5,3 +5,4 @@ ovos-plugin-manager~=0.0.4
 neon-utils~=0.15,>=0.15.1a19
 click~=8.0
 click-default-group~=1.2
+# python-vlc==1.1.2
