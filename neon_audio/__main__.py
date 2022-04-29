@@ -91,7 +91,12 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
         LOG.error(e)
         status.set_error(e)
     else:
-        if not audio or audio.wait_for_load() and len(audio.service) > 0:
+        if not audio or len(audio.service) == 0:
+            LOG.warning("No audio services loaded")
+            status.set_ready()
+            wait_for_exit_signal()
+            status.set_stopping()
+        if audio.wait_for_load():
             # If at least one service exists, report ready
             status.set_ready()
             wait_for_exit_signal()

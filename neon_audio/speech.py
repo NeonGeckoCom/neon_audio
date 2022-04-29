@@ -89,7 +89,8 @@ def handle_speak(message):
     if message.context.get('destination') and not \
             ('debug_cli' in message.context['destination'] or
              'audio' in message.context['destination']):
-        LOG.warning("speak message not targeted at audio module")
+        LOG.warning(f"speak message not targeted at audio module. "
+                    f"destination={message.context['destination']}")
         # return
 
     # Get conversation ID

@@ -28,10 +28,12 @@ RUN apt-get update && \
     gcc \
     g++ \
     libsndfile1 \
-    espeak-ng
+    espeak-ng \
+    git  # Added to handle installing plugins from git
 
-# Install TTS here to reduce time and layer size
-RUN pip install tts==0.6.1
+# Install TTS for Coqui plugin here to reduce time and layer size
+RUN pip install tts==0.6.2
+
 
 ADD . /neon_audio
 WORKDIR /neon_audio

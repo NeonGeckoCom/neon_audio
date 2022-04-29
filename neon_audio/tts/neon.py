@@ -172,6 +172,9 @@ class WrappedTTS(TTS):
                              request["language"], request["gender"],
                              key + '.' + self.audio_ext)
             os.makedirs(dirname(file), exist_ok=True)
+            if os.path.isfile(file):
+                LOG.info(f"Using cached TTS audio")
+                return file, None
             plugin_kwargs = dict()
             if "speaker" in inspect.signature(self.get_tts).parameters:
                 plugin_kwargs['speaker'] = request
@@ -256,6 +259,7 @@ class WrappedTTS(TTS):
 
             # TODO dedicated klat handler/plugin
             if message.context.get("klat_data"):
+                LOG.info("Sending klat.response")
                 self.bus.emit(message.forward("klat.response",
                                               {"responses": responses,
                                                "speaker": message.data.get("speaker")}))
