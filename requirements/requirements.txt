@@ -5,4 +5,6 @@ ovos-plugin-manager~=0.0.4
 neon-utils~=0.16
 click~=8.0
 click-default-group~=1.2
+ovos-core~=0.0.2a51
+# TODO: Update to stable version
 # python-vlc==1.1.2
