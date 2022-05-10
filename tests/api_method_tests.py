@@ -19,7 +19,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from time import sleep, time
+from time import time
 
 import os
 import sys
@@ -29,7 +29,7 @@ from multiprocessing import Process
 
 from mycroft_bus_client import MessageBusClient, Message
 from neon_utils.configuration_utils import get_neon_audio_config
-from mycroft.messagebus.service.__main__ import main as messagebus_service
+from neon_messagebus.service import NeonBusService
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.__main__ import main as neon_audio_main
@@ -45,8 +45,10 @@ class TestAPIMethods(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.bus_thread = Process(target=messagebus_service, daemon=False)
-        cls.audio_thread = Process(target=neon_audio_main, kwargs={"config": TEST_CONFIG}, daemon=False)
+        cls.bus_thread = NeonBusService(daemonic=True)
+        cls.audio_thread = Process(target=neon_audio_main,
+                                   kwargs={"config": TEST_CONFIG},
+                                   daemon=False)
         cls.bus_thread.start()
         cls.audio_thread.start()
         cls.bus = MessageBusClient()
@@ -61,7 +63,7 @@ class TestAPIMethods(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
-        cls.bus_thread.terminate()
+        cls.bus_thread.shutdown()
         cls.audio_thread.terminate()
 
     def test_get_tts_no_sentence(self):
@@ -87,7 +89,8 @@ class TestAPIMethods(unittest.TestCase):
         context = {"client": "tester",
                    "ident": str(time()),
                    "user": "TestRunner"}
-        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": text}, context),
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts",
+                                                      {"text": text}, context),
                                               context["ident"], timeout=60)
         self.assertEqual(tts_resp.context, context)
         responses = tts_resp.data

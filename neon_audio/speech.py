@@ -23,20 +23,24 @@ import time
 
 from threading import Lock
 from typing import Optional
-from neon_utils import LOG
-from ovos_utils.signal import check_for_signal
-from mycroft_bus_client import Message, MessageBusClient
-
-from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
-from neon_utils.metrics_utils import Stopwatch, report_metric
-from neon_audio.tts import TTSFactory, TTS
 
 from mycroft.tts.remote_tts import RemoteTTSTimeoutException
-from mycroft.tts.mimic_tts import Mimic
+from mycroft_bus_client import Message, MessageBusClient
+from neon_utils.configuration_utils import NGIConfig, get_neon_audio_config
+from ovos_plugin_manager.tts import TTS
+from ovos_utils.log import LOG
+from ovos_utils.signal import check_for_signal
+from neon_utils.metrics_utils import Stopwatch, report_metric
+from neon_audio.tts import TTSFactory, WrappedTTS
+
+try:
+    from ovos_tts_plugin_mimic import MimicTTSPlugin
+except ImportError:
+    MimicTTSPlugin = None
 
 bus: Optional[MessageBusClient] = None  # Mycroft messagebus connection
 config: Optional[NGIConfig] = None
-tts: Optional[TTS] = None
+tts: Optional[WrappedTTS] = None
 mimic_fallback_obj: Optional[TTS] = None
 tts_hash = None
 lock = Lock()
@@ -60,12 +64,12 @@ def handle_get_tts(message):
             bus.emit(message.reply(ident, data={"error": f"text is not a str: {text}"}))
             return
         try:
-            responses = tts.execute(text, message=message)
+            responses = tts.get_multiple_tts(message)
             # TODO: Consider including audio bytes here in case path is inaccessible DM
             # responses = {lang: {sentence: text, male: Optional[path], female: Optional[path}}
             bus.emit(message.reply(ident, data=responses))
         except Exception as e:
-            LOG.error(e)
+            LOG.exception(e)
             bus.emit(message.reply(ident, data={"error": repr(e)}))
     else:
         bus.emit(message.reply(ident, data={"error": "No text provided."}))
@@ -85,7 +89,8 @@ def handle_speak(message):
     if message.context.get('destination') and not \
             ('debug_cli' in message.context['destination'] or
              'audio' in message.context['destination']):
-        LOG.warning("speak message not targeted at audio module")
+        LOG.warning(f"speak message not targeted at audio module. "
+                    f"destination={message.context['destination']}")
         # return
 
     # Get conversation ID
@@ -123,15 +128,24 @@ def mute_and_speak(utterance, message):
         tts.playback.join()
         # Create new tts instance
         tts = TTSFactory.create(config)
-        tts.init(bus)
+        try:
+            tts.init(bus)
+        except RuntimeError as e:
+            LOG.warning(e)
         tts_hash = hash(str(config.get('tts', '')))
 
     try:
         tts.execute(utterance, message.context['ident'], listen, message)
-    except RemoteTTSTimeoutException as e:
-        LOG.error(e)
+    except RemoteTTSTimeoutException:
         mimic_fallback_tts(utterance, message.context['ident'], message)
     except Exception as e:
+        LOG.exception(e)
+        if MimicTTSPlugin:
+            try:
+                mimic_fallback_tts(utterance, message.context['ident'], message)
+                return
+            except Exception as e2:
+                LOG.error(e2)
         LOG.error('TTS execution failed ({})'.format(repr(e)))
 
 
@@ -139,13 +153,13 @@ def _get_mimic_fallback():
     """Lazily initializes the fallback TTS if needed."""
     global mimic_fallback_obj
     if not mimic_fallback_obj:
-        audio_config = get_neon_audio_config()
-        tts_config = audio_config.get('tts', {}).get("mimic", {})
-        lang = audio_config.get("lang", "en-us")
-        fallback_tts = Mimic(lang, tts_config)
-        fallback_tts.validator.validate()
-        fallback_tts.init(bus)
-        mimic_fallback_obj = fallback_tts
+        config = get_neon_audio_config()
+        tts_config = config.get('tts', {}).get("mimic", {})
+        lang = config.get("lang", "en-us")
+        tts = MimicTTSPlugin(lang, tts_config)
+        tts.validator.validate()
+        tts.init(bus)
+        mimic_fallback_obj = tts
 
     return mimic_fallback_obj
 

@@ -1,5 +1,7 @@
 neon-tts-plugin-mozilla_remote
-ovos-plugin-manager==0.0.1
-ovos-core[bus]~=0.0.1
+neon-messagebus>=0.0.2a6
+# TODO: Update this to a stable release spec
+neon-lang-plugin-libretranslate~=0.1,>=0.1.2
+
 pytest
 mock~=4.0

@@ -19,47 +19,4 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
-from ovos_utils.signal import check_for_signal, create_signal
-from neon_utils.configuration_utils import get_neon_local_config
-
-
-IPC_PATH = get_neon_local_config().get("dirVars", {}).get("ipcDir", "/tmp/neon/ipc")
-CONFIG = {"ipc_path": IPC_PATH}
-
-
-def is_speaking():
-    """Determine if Text to Speech is occurring
-
-    Returns:
-        bool: True while still speaking
-    """
-    return check_for_signal("isSpeaking", -1, CONFIG)
-
-
-def wait_while_speaking():
-    """Pause as long as Text to Speech is still happening
-
-    Pause while Text to Speech is still happening.  This always pauses
-    briefly to ensure that any preceeding request to speak has time to
-    begin.
-    """
-    # TODO: Better method using messages or signals here DM
-    time.sleep(0.3)  # Wait briefly in for any queued speech to begin
-    while is_speaking():
-        time.sleep(0.1)
-
-
-def stop_speaking():
-    # TODO: Less hacky approach to this once Audio Manager is implemented
-    # Skills should only be able to stop speech they've initiated
-    from mycroft_bus_client.send_func import send
-    create_signal('stoppingTTS')
-    send('mycroft.audio.speech.stop')
-
-    # Block until stopped
-    while check_for_signal("isSpeaking", -1, CONFIG):
-        time.sleep(0.25)
-
-    # This consumes the signal
-    check_for_signal('stoppingTTS', CONFIG)
+from mycroft.audio.utils import wait_while_speaking, is_speaking, stop_speaking

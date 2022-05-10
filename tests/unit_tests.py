@@ -24,13 +24,19 @@ import shutil
 import sys
 import unittest
 
+from time import time
+from os.path import join, dirname
+from threading import Event
 from mock import Mock
+from mycroft_bus_client import Message
+from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
-from neon_utils import is_speaking
+from neon_utils.signal_utils import check_for_signal
+from neon_utils.configuration_utils import get_neon_local_config
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from neon_audio.tts import *
+from neon_audio.tts import WrappedTTS
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from test_objects import DummyTTS, DummyTTSValidator
@@ -41,14 +47,18 @@ class TTSBaseClassTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.test_cache_dir = join(dirname(__file__), "test_cache")
         cls.test_conf_dir = join(dirname(__file__), "config")
+        os.makedirs(cls.test_conf_dir, exist_ok=True)
         os.environ["NEON_CONFIG_PATH"] = cls.test_conf_dir
         config = get_neon_local_config()
         config["dirVars"]["cacheDir"] = cls.test_cache_dir
         config.write_changes()
-        cls.config = dict()
+        cls.config = {"key": "val"}
         cls.lang = "en-us"
-        cls.tts = DummyTTS(cls.lang, cls.config)
-        cls.tts.init(FakeBus())
+        cls.tts = WrappedTTS(DummyTTS, cls.lang, cls.config)
+        bus = FakeBus()
+        bus.connected_event = Event()
+        bus.connected_event.set()
+        cls.tts.init(bus)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -60,6 +70,9 @@ class TTSBaseClassTests(unittest.TestCase):
         os.environ.pop("NEON_CONFIG_PATH")
 
     def test_class_init(self):
+        from ovos_plugin_manager.templates.tts import TTS
+        # self.assertIsInstance(self.tts, WrappedTTS)
+        self.assertIsInstance(self.tts, TTS)
         self.assertIsInstance(self.tts.bus, FakeBus)
         self.assertIsInstance(self.tts.language_config, dict)
         # TODO: Fix import errors in unit tests
@@ -72,7 +85,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertFalse(self.tts.phonetic_spelling)
         self.assertEqual(self.tts.ssml_tags, ["speak"])
 
-        self.assertIsNone(self.tts.voice)
+        self.assertEqual(self.tts.voice, "default")
         self.assertTrue(self.tts.queue.empty())
         self.assertIsInstance(self.tts.playback, PlaybackThread)
 
@@ -81,25 +94,15 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertIsInstance(self.tts.keys, dict)
 
         self.assertTrue(os.path.isdir(self.tts.cache_dir))
-        self.assertTrue(os.path.isfile(self.tts.translation_cache))
+        # self.assertTrue(os.path.isfile(self.tts.translation_cache))
         self.assertIsInstance(self.tts.cached_translations, dict)
 
-    def test_load_spellings(self):
-        # TODO: Init a tts object and test load of phonetic_spellings.txt
-        pass
-
-    def test_begin_audio(self):
-        # TODO: bus listener and test call
-        pass
-
-    def test_end_audio(self):
-        # TODO: bus listener and test call
-        pass
-
     def test_modify_tag(self):
+        # TODO: Legacy
         self.assertEqual("test", self.tts.modify_tag("test"))
 
     def test_validate_ssml(self):
+        # TODO: Legacy
         valid_tag_string = "<speak>hello</speak>"
         extra_tags_string = "<speak>hello</br></speak>"
 
@@ -107,6 +110,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertEqual(valid_tag_string, self.tts.validate_ssml(extra_tags_string))
 
     def test_preprocess_sentence(self):
+        # TODO: Legacy
         sentence = "this is a test"
         self.assertEqual(self.tts._preprocess_sentence(sentence), [sentence])
 
@@ -116,28 +120,24 @@ class TTSBaseClassTests(unittest.TestCase):
         default_execute = self.tts._execute
         self.tts._execute = Mock()
         self.tts.execute(sentence, ident)
-        self.assertTrue(is_speaking())
-        self.tts._execute.assert_called_once_with(sentence, ident, False, None)
+        self.assertTrue(check_for_signal("isSpeaking"))
+        self.tts._execute.assert_called_once_with(sentence, ident, False)
         self.tts._execute = default_execute
 
-        # TODO: Test tts._execute
+        default_get_multiple_tts = self.tts.get_multiple_tts
+        self.tts.get_multiple_tts = Mock(return_value=dict())
+        message = Message("test")
+        self.tts.execute(sentence, ident, message=message)
+        self.tts.get_multiple_tts.assert_called_once_with(message)
+        self.tts.get_multiple_tts = default_get_multiple_tts
+
+    def test_get_multiple_tts(self):
+        # TODO
+        pass
 
     def test_viseme(self):
+        # TODO: Legacy
         self.assertIsNone(self.tts.viseme(""))
-
-    def test_clear_cache(self):
-        # TODO: Update method and add tests
-        pass
-
-    def test_save_phonemes(self):
-        # TODO
-        pass
-
-    def test_load_phonemes(self):
-        # TODO
-        pass
-
-
 
     def test_validator_valid(self):
         self.assertTrue(self.tts.validator.validate_lang())
@@ -153,12 +153,20 @@ class TTSBaseClassTests(unittest.TestCase):
         tts.shutdown()
 
     def test_get_tts(self):
-        file, phonemes = self.tts.get_tts("test", "file_path", speaker={})
-        self.assertEqual(file, "file_path")
+        test_file_path = join(dirname(__file__), "test.wav")
+        file, phonemes = self.tts._get_tts("test", wav_file=test_file_path,
+                                           speaker={})
+        self.assertEqual(file, test_file_path)
         self.assertIsNone(phonemes)
 
 
-# TODO: TTSValidator, TTSFactory, PlaybackThread tests DM
+class TTSUtilTests(unittest.TestCase):
+    def test_install_tts_plugin(self):
+        from neon_audio.utils import install_tts_plugin
+        self.assertTrue(install_tts_plugin("coqui"))
+        self.assertTrue(install_tts_plugin("neon-tts-plugin-coqui"))
+        self.assertFalse(install_tts_plugin("neon-tts-plugin-invalid"))
+
 
 if __name__ == '__main__':
     unittest.main()
