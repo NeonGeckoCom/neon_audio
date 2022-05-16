@@ -19,4 +19,26 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from mycroft.audio.utils import wait_while_speaking, is_speaking, stop_speaking
+from neon_utils.logger import LOG
+
+
+def wait_while_speaking():
+    LOG.warning("This reference is deprecated. Use bus events to check state")
+    from neon_utils.signal_utils import wait_for_signal_clear
+    wait_for_signal_clear("isSpeaking")
+
+
+def is_speaking():
+    LOG.warning("This reference is deprecated. Use bus events to check state")
+    from neon_utils.signal_utils import check_for_signal
+    check_for_signal("isSpeaking")
+
+
+def stop_speaking():
+    LOG.warning("This reference is deprecated. Emit mycroft.audio.speech.stop")
+    if is_speaking():
+        from mycroft_bus_client import send
+        send('mycroft.audio.speech.stop')
+
+        # Block until stopped
+        wait_while_speaking()
