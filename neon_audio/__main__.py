@@ -26,11 +26,6 @@ from neon_utils.logger import LOG
 
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap
 
-from neon_audio import speech
-from neon_audio.audioservice import NeonAudioService
-
-from mycroft.util import reset_sigint_handler, wait_for_exit_signal
-
 
 def on_ready():
     LOG.info('Audio service is ready.')
@@ -64,9 +59,20 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
      :param config: dict configuration containing keys: ['tts', 'Audio', 'language']
     """
     init_config_dir()
-    reset_sigint_handler()
 
     bus = get_messagebus()
+
+    from neon_utils.signal_utils import init_signal_bus, \
+        init_signal_handlers, check_for_signal
+    init_signal_bus(bus)
+    init_signal_handlers()
+
+    from neon_audio import speech
+    from neon_audio.audioservice import NeonAudioService
+    from mycroft.util import reset_sigint_handler, wait_for_exit_signal
+
+    reset_sigint_handler()
+
     callbacks = StatusCallbackMap(on_ready=ready_hook, on_error=error_hook,
                                   on_stopping=stopping_hook,
                                   on_alive=alive_hook, on_started=started_hook)
@@ -74,10 +80,6 @@ def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping,
     try:
         speech.init(bus, config)
 
-        from neon_utils.signal_utils import init_signal_bus,\
-            init_signal_handlers, check_for_signal
-        init_signal_bus(bus)
-        init_signal_handlers()
 
         check_for_signal("isSpeaking")
 

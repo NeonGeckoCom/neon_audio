@@ -31,7 +31,7 @@ def wait_while_speaking():
 def is_speaking():
     LOG.warning("This reference is deprecated. Use bus events to check state")
     from neon_utils.signal_utils import check_for_signal
-    check_for_signal("isSpeaking")
+    check_for_signal("isSpeaking", -1)
 
 
 def stop_speaking():
