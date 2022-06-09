@@ -33,7 +33,7 @@ from os.path import expanduser, dirname, join
 
 from json_database import JsonStorageXDG, JsonStorage
 from mycroft.util.log import LOG
-from mycroft_bus_client.message import dig_for_message, Message
+from mycroft_bus_client.message import Message
 from neon_utils.configuration_utils import get_neon_lang_config, get_neon_user_config, get_neon_local_config
 from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
 from ovos_plugin_manager.templates.tts import TTS
@@ -234,7 +234,8 @@ class WrappedTTS(TTS):
                 responses[lang][request["gender"]] = wav_file
                 responses[lang]["genders"].append(request["gender"])
                 # If this is a remote request, encode audio in the response
-                if message.context.get("klat_data"):
+                if message.context.get("klat_data") or \
+                        message.msg_type == "neon.get_tts":
                     responses[lang].setdefault("audio", {})
                     responses[lang]["audio"][request["gender"]] = \
                         encode_file_to_base64_string(wav_file)
