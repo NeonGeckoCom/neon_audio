@@ -55,7 +55,7 @@ def on_started():
     LOG.debug("Speech service started")
 
 
-class NeonSpeechService(SpeechService):
+class NeonPlaybackService(SpeechService):
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
@@ -106,3 +106,4 @@ class NeonSpeechService(SpeechService):
 
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
+        super().init_messagebus()

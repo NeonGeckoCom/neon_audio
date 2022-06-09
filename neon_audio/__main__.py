@@ -55,6 +55,10 @@ def on_started():
 
 
 def main(*args, **kwargs):
+    if kwargs.get("config"):
+        LOG.warning("Found `config` kwarg, but expect `audio_config`")
+        kwargs["audio_config"] = kwargs["config"]
+
     init_config_dir()
     bus = get_messagebus()
 
@@ -63,14 +67,14 @@ def main(*args, **kwargs):
     init_signal_bus(bus)
     init_signal_handlers()
 
-    from neon_audio.service import NeonSpeechService
+    from neon_audio.service import NeonPlaybackService
     from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 
     reset_sigint_handler()
     check_for_signal("isSpeaking")
     Lock("audio")
     setup_locale()
-    service = NeonSpeechService(*args, **kwargs)
+    service = NeonPlaybackService(*args, **kwargs)
     service.start()
     wait_for_exit_signal()
     service.shutdown()
