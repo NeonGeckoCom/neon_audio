@@ -27,10 +27,15 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from threading import Thread
 
+import mycroft.audio.tts
 from ovos_utils.process_utils import ProcessState
 
 from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
+
+from neon_audio.tts import TTSFactory
+mycroft.audio.tts.TTSFactory = TTSFactory
+
 
 from mycroft.audio.service import SpeechService
 
