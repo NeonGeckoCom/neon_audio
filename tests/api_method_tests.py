@@ -31,19 +31,18 @@ from time import time
 import os
 import sys
 import unittest
-
-from multiprocessing import Process
-
+from mock.mock import Mock
 from mycroft_bus_client import MessageBusClient, Message
+
 from neon_utils.configuration_utils import get_neon_audio_config
 from neon_messagebus.service import NeonBusService
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from neon_audio.__main__ import main as neon_audio_main
 
 TEST_CONFIG = get_neon_audio_config()
 TEST_CONFIG["tts"]["module"] = "mozilla_remote"
-TEST_CONFIG["tts"]["mozilla_remote"] = {"api_url": os.environ.get("TTS_URL")}
+TEST_CONFIG["tts"]["mozilla_remote"] = \
+    {"api_url": os.environ.get("TTS_URL") or "https://mtts.2022.us"}
 
 
 class TestAPIMethods(unittest.TestCase):
@@ -52,15 +51,22 @@ class TestAPIMethods(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        import mycroft.configuration
+        get_config = Mock(return_value=TEST_CONFIG)
+        mycroft.configuration.Configuration._real_get = get_config
+        from neon_audio.service import NeonPlaybackService
+
         cls.bus_thread = NeonBusService(daemonic=True)
-        cls.audio_thread = Process(target=neon_audio_main,
-                                   kwargs={"config": TEST_CONFIG},
-                                   daemon=False)
         cls.bus_thread.start()
-        cls.audio_thread.start()
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
         cls.bus.connected_event.wait(30)
+
+        cls.audio_thread = NeonPlaybackService(audio_config=TEST_CONFIG,
+                                               bus=cls.bus,
+                                               daemonic=True)
+        cls.audio_thread.start()
+
         alive = False
         while not alive:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
@@ -71,7 +77,7 @@ class TestAPIMethods(unittest.TestCase):
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
         cls.bus_thread.shutdown()
-        cls.audio_thread.terminate()
+        cls.audio_thread.shutdown()
 
     def test_get_tts_no_sentence(self):
         context = {"client": "tester",
