@@ -31,19 +31,18 @@ from time import time
 import os
 import sys
 import unittest
-
+from mock.mock import Mock
 from mycroft_bus_client import MessageBusClient, Message
 
-from neon_audio.service import NeonPlaybackService
 from neon_utils.configuration_utils import get_neon_audio_config
 from neon_messagebus.service import NeonBusService
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from neon_audio.__main__ import main as neon_audio_main
 
 TEST_CONFIG = get_neon_audio_config()
 TEST_CONFIG["tts"]["module"] = "mozilla_remote"
-TEST_CONFIG["tts"]["mozilla_remote"] = {"api_url": os.environ.get("TTS_URL")}
+TEST_CONFIG["tts"]["mozilla_remote"] = \
+    {"api_url": os.environ.get("TTS_URL") or "https://mtts.2022.us"}
 
 
 class TestAPIMethods(unittest.TestCase):
@@ -52,6 +51,11 @@ class TestAPIMethods(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        import mycroft.configuration
+        get_config = Mock(return_value=TEST_CONFIG)
+        mycroft.configuration.Configuration._real_get = get_config
+        from neon_audio.service import NeonPlaybackService
+
         cls.bus_thread = NeonBusService(daemonic=True)
         cls.bus_thread.start()
         cls.bus = MessageBusClient()
