@@ -32,9 +32,9 @@ import os
 import sys
 import unittest
 
-from multiprocessing import Process
-
 from mycroft_bus_client import MessageBusClient, Message
+
+from neon_audio.service import NeonPlaybackService
 from neon_utils.configuration_utils import get_neon_audio_config
 from neon_messagebus.service import NeonBusService
 
@@ -53,14 +53,16 @@ class TestAPIMethods(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.bus_thread = NeonBusService(daemonic=True)
-        cls.audio_thread = Process(target=neon_audio_main,
-                                   kwargs={"config": TEST_CONFIG},
-                                   daemon=False)
         cls.bus_thread.start()
-        cls.audio_thread.start()
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
         cls.bus.connected_event.wait(30)
+
+        cls.audio_thread = NeonPlaybackService(audio_config=TEST_CONFIG,
+                                               bus=cls.bus,
+                                               daemonic=True)
+        cls.audio_thread.start()
+
         alive = False
         while not alive:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
@@ -71,7 +73,7 @@ class TestAPIMethods(unittest.TestCase):
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
         cls.bus_thread.shutdown()
-        cls.audio_thread.terminate()
+        cls.audio_thread.shutdown()
 
     def test_get_tts_no_sentence(self):
         context = {"client": "tester",
