@@ -1,5 +1,6 @@
 neon-tts-plugin-mozilla_remote
-neon-messagebus~=0.1
+# neon-messagebus~=0.1
+neon-messagebus @ git+https://github.com/neondaniel/neon_messagebus@DEP_UpdateDependencySpec
 neon-lang-plugin-libretranslate~=0.1,>=0.1.2
 
 pytest
