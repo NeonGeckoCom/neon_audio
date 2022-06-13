@@ -78,3 +78,14 @@ def install_tts_plugin(plugin: str) -> bool:
     returned = pip.main(['install', _plugin_to_package(plugin), "-c", tmp_file])
     LOG.info(f"pip status: {returned}")
     return returned == 0
+
+
+def use_neon_audio(func):
+    """
+    Wrapper to ensure call originates from neon_audio for stack checks.
+    This is used for ovos-utils config platform detection which uses the stack
+    to determine which module config to return.
+    """
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper

@@ -38,6 +38,7 @@ from neon_messagebus.service import NeonBusService
 from mycroft.configuration import Configuration
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from neon_audio.utils import use_neon_audio
 
 
 class TestAPIMethods(unittest.TestCase):
@@ -49,7 +50,7 @@ class TestAPIMethods(unittest.TestCase):
         test_config_dir = os.path.join(os.path.dirname(__file__), "config")
         os.makedirs(test_config_dir, exist_ok=True)
         os.environ["XDG_CONFIG_HOME"] = test_config_dir
-        init_config_dir()
+        use_neon_audio(init_config_dir)()
 
         test_config = Configuration()
         test_config["tts"]["module"] = "mozilla_remote"
@@ -67,6 +68,7 @@ class TestAPIMethods(unittest.TestCase):
         cls.audio_thread = NeonPlaybackService(audio_config=test_config,
                                                bus=cls.bus,
                                                daemonic=True)
+        cls.assertEqual(cls.audio_thread.config, test_config)
         cls.audio_thread.start()
 
         alive = False
