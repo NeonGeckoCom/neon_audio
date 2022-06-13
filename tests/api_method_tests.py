@@ -53,8 +53,8 @@ class TestAPIMethods(unittest.TestCase):
 
         test_config = Configuration()
         test_config["tts"]["module"] = "neon-tts-plugin-larynx-server"
-        test_config["tts"]["mozilla_remote"] = \
-            {"api_url": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
+        test_config["tts"]["neon-tts-plugin-larynx-server"] = \
+            {"host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
         assert test_config["tts"]["module"] == "neon-tts-plugin-larynx-server"
 
         cls.messagebus = NeonBusService(debug=True, daemonic=True)
