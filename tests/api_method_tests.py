@@ -31,20 +31,19 @@ from time import time
 import os
 import sys
 import unittest
-from mycroft_bus_client import MessageBusClient, Message
 
+from mycroft_bus_client import MessageBusClient, Message
 from neon_utils.configuration_utils import init_config_dir
 from neon_messagebus.service import NeonBusService
+
 from mycroft.configuration import Configuration
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from neon_audio.service import NeonPlaybackService
 from neon_audio.utils import use_neon_audio
 
 
 class TestAPIMethods(unittest.TestCase):
-    bus_thread = None
-    audio_thread = None
-
     @classmethod
     def setUpClass(cls) -> None:
         test_config_dir = os.path.join(os.path.dirname(__file__), "config")
@@ -56,32 +55,31 @@ class TestAPIMethods(unittest.TestCase):
         test_config["tts"]["module"] = "mozilla_remote"
         test_config["tts"]["mozilla_remote"] = \
             {"api_url": os.environ.get("TTS_URL") or "https://mtts.2022.us"}
+        assert test_config["tts"]["module"] == "mozilla_remote"
 
-        from neon_audio.service import NeonPlaybackService
-
-        cls.bus_thread = NeonBusService(daemonic=True)
-        cls.bus_thread.start()
+        cls.messagebus = NeonBusService(debug=True, daemonic=True)
+        cls.messagebus.start()
+        cls.audio_service = NeonPlaybackService(audio_config=test_config,
+                                                daemonic=True)
+        cls.audio_service.start()
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
-        cls.bus.connected_event.wait(30)
-
-        cls.audio_thread = NeonPlaybackService(audio_config=test_config,
-                                               bus=cls.bus,
-                                               daemonic=True)
-        cls.assertEqual(cls.audio_thread.config, test_config)
-        cls.audio_thread.start()
-
+        if not cls.bus.connected_event.wait(30):
+            raise TimeoutError("Bus not connected after 60 seconds")
         alive = False
-        while not alive:
+        timeout = time() + 120
+        while not alive and time() < timeout:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
             if message:
                 alive = message.data.get("status")
+        if not alive:
+            raise TimeoutError("Speech module not ready after 120 seconds")
 
     @classmethod
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
-        cls.bus_thread.shutdown()
-        cls.audio_thread.shutdown()
+        cls.messagebus.shutdown()
+        cls.audio_service.shutdown()
 
     def test_get_tts_no_sentence(self):
         context = {"client": "tester",

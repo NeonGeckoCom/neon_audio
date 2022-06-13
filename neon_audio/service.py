@@ -35,6 +35,7 @@ from neon_audio.tts import TTSFactory
 mycroft.audio.tts.TTSFactory = TTSFactory
 
 from mycroft.audio.service import SpeechService
+from mycroft.configuration import Configuration
 
 
 def on_ready():
@@ -79,7 +80,12 @@ class NeonPlaybackService(SpeechService):
             patch_config(audio_config)
         SpeechService.__init__(self, ready_hook, error_hook, stopping_hook,
                                alive_hook, started_hook, watchdog, bus)
+        assert self.config == Configuration()
         self.setDaemon(daemonic)
+        from neon_utils.signal_utils import init_signal_handlers, \
+            init_signal_bus
+        init_signal_bus(self.bus)
+        init_signal_handlers()
         if self.status == ProcessState.ERROR and \
                 get_neon_device_type() == 'server':
             LOG.info("Ignoring audio service error on server device")
