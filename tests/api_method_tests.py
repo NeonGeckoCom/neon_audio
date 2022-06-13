@@ -31,18 +31,13 @@ from time import time
 import os
 import sys
 import unittest
-from mock.mock import Mock
 from mycroft_bus_client import MessageBusClient, Message
 
-from neon_utils.configuration_utils import _get_neon_audio_config
+from neon_utils.configuration_utils import init_config_dir
 from neon_messagebus.service import NeonBusService
+from mycroft.configuration import Configuration
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-
-TEST_CONFIG = _get_neon_audio_config()
-TEST_CONFIG["tts"]["module"] = "mozilla_remote"
-TEST_CONFIG["tts"]["mozilla_remote"] = \
-    {"api_url": os.environ.get("TTS_URL") or "https://mtts.2022.us"}
 
 
 class TestAPIMethods(unittest.TestCase):
@@ -51,9 +46,16 @@ class TestAPIMethods(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        import mycroft.configuration
-        get_config = Mock(return_value=TEST_CONFIG)
-        mycroft.configuration.Configuration._real_get = get_config
+        test_config_dir = os.path.join(os.path.dirname(__file__), "config")
+        os.makedirs(test_config_dir, exist_ok=True)
+        os.environ["XDG_CONFIG_HOME"] = test_config_dir
+        init_config_dir()
+
+        test_config = Configuration()
+        test_config["tts"]["module"] = "mozilla_remote"
+        test_config["tts"]["mozilla_remote"] = \
+            {"api_url": os.environ.get("TTS_URL") or "https://mtts.2022.us"}
+
         from neon_audio.service import NeonPlaybackService
 
         cls.bus_thread = NeonBusService(daemonic=True)
@@ -62,7 +64,7 @@ class TestAPIMethods(unittest.TestCase):
         cls.bus.run_in_thread()
         cls.bus.connected_event.wait(30)
 
-        cls.audio_thread = NeonPlaybackService(audio_config=TEST_CONFIG,
+        cls.audio_thread = NeonPlaybackService(audio_config=test_config,
                                                bus=cls.bus,
                                                daemonic=True)
         cls.audio_thread.start()
