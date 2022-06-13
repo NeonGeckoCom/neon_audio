@@ -141,7 +141,7 @@ class WrappedTTS(TTS):
         into the selected TTS engine """
         base_engine = base_engine(*args, **kwargs)
 
-        language_config = Configuration().get("language")
+        language_config = Configuration().get("language") or dict()
 
         base_engine.keys = {}
 
