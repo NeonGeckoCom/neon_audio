@@ -27,10 +27,11 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from neon_utils.configuration_utils import get_neon_audio_config
 from ovos_plugin_manager.tts import OVOSTTSFactory, get_tts_config
 from ovos_plugin_manager.templates.tts import TTSValidator
 from neon_audio.tts.neon import TTS, WrappedTTS
+
+from mycroft.configuration import Configuration
 
 
 class TTSFactory(OVOSTTSFactory):
@@ -46,8 +47,10 @@ class TTSFactory(OVOSTTSFactory):
             "module": <engine_name>
         }
         """
-        config = config or get_neon_audio_config()
-        config["lang"] = config.get("language", {}).get("user") or config.get("lang", "en-us")
+        config = config or Configuration()
+        config["lang"] = config.get("language",
+                                    {}).get("user") or config.get("lang",
+                                                                  "en-us")
 
         tts_config = get_tts_config(config)
         tts_lang = tts_config["lang"]

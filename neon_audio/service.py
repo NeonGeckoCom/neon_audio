@@ -25,17 +25,14 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from threading import Thread
 
 import mycroft.audio.tts
-from ovos_utils.process_utils import ProcessState
 
+from ovos_utils.process_utils import ProcessState
 from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
-
 from neon_audio.tts import TTSFactory
 mycroft.audio.tts.TTSFactory = TTSFactory
-
 
 from mycroft.audio.service import SpeechService
 
@@ -76,12 +73,13 @@ class NeonPlaybackService(SpeechService):
         :param daemonic: if True, run this thread as a daemon
         :param bus: Connected MessageBusClient
         """
+        if audio_config:
+            LOG.info("Updating global config with passed config")
+            from neon_audio.utils import patch_config
+            patch_config(audio_config)
         SpeechService.__init__(self, ready_hook, error_hook, stopping_hook,
                                alive_hook, started_hook, watchdog, bus)
         self.setDaemon(daemonic)
-        self.config = audio_config or self.config
-        self.config["tts"]["fallback_module"] = self.config["tts"]["module"]
-        self._maybe_reload_tts()
         if self.status == ProcessState.ERROR and \
                 get_neon_device_type() == 'server':
             LOG.info("Ignoring audio service error on server device")

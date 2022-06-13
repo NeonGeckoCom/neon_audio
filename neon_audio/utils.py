@@ -31,6 +31,19 @@ from neon_utils.logger import LOG
 from neon_utils.packaging_utils import get_package_dependencies
 
 
+def patch_config(config: dict = None):
+    """
+    Write the specified speech configuration to the global config file
+    :param config: Mycroft-compatible configuration override
+    """
+    from mycroft.configuration import USER_CONFIG, LocalConf
+
+    config = config or dict()
+    local_config = LocalConf(USER_CONFIG)
+    local_config.update(config)
+    local_config.store()
+
+
 def _plugin_to_package(plugin: str) -> str:
     """
     Get a PyPI spec for a known plugin entrypoint

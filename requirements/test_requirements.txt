@@ -1,6 +1,5 @@
 neon-tts-plugin-mozilla_remote
-neon-messagebus>=0.0.2a6
-# TODO: Update this to a stable release spec
+neon-messagebus~=0.1
 neon-lang-plugin-libretranslate~=0.1,>=0.1.2
 
 pytest

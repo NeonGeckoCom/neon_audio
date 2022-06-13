@@ -34,12 +34,12 @@ import unittest
 from mock.mock import Mock
 from mycroft_bus_client import MessageBusClient, Message
 
-from neon_utils.configuration_utils import get_neon_audio_config
+from neon_utils.configuration_utils import _get_neon_audio_config
 from neon_messagebus.service import NeonBusService
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-TEST_CONFIG = get_neon_audio_config()
+TEST_CONFIG = _get_neon_audio_config()
 TEST_CONFIG["tts"]["module"] = "mozilla_remote"
 TEST_CONFIG["tts"]["mozilla_remote"] = \
     {"api_url": os.environ.get("TTS_URL") or "https://mtts.2022.us"}

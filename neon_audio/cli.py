@@ -30,7 +30,8 @@ import click
 
 from click_default_group import DefaultGroup
 from neon_utils.packaging_utils import get_package_version_spec
-from neon_utils.configuration_utils import get_neon_audio_config
+
+from mycroft.configuration import Configuration
 
 
 @click.group("neon-audio", cls=DefaultGroup,
@@ -54,7 +55,7 @@ def neon_audio_cli(version: bool = False):
               help="Force pip installation of configured module")
 def run(module, package, force_install):
     from neon_audio.__main__ import main
-    audio_config = get_neon_audio_config()
+    audio_config = Configuration()
     if force_install or module or package:
         install_plugin(module, package, force_install)
     if module and module != audio_config["tts"]["module"]:
@@ -65,7 +66,7 @@ def run(module, package, force_install):
     click.echo(f'Loading TTS Module: {audio_config["tts"]["module"]}')
     click.echo(f'TTS Config={audio_config["tts"]}')
     click.echo("Starting Audio Client")
-    main(config=audio_config)
+    main(audio_config=audio_config)
     click.echo("Audio Client Shutdown")
 
 
@@ -78,7 +79,7 @@ def run(module, package, force_install):
               help="Force pip installation of configured module")
 def install_plugin(module, package, force_install):
     from neon_audio.utils import install_tts_plugin
-    audio_config = get_neon_audio_config()
+    audio_config = Configuration()
 
     if force_install and not (package or module):
         click.echo("Installing STT plugin from configuration")
