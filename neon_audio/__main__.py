@@ -61,7 +61,7 @@ def main(*args, **kwargs):
 
     init_config_dir()
     bus = get_messagebus()
-
+    kwargs["bus"] = bus
     from neon_utils.signal_utils import init_signal_bus, \
         init_signal_handlers, check_for_signal
     init_signal_bus(bus)
