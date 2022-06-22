@@ -31,10 +31,6 @@ RUN apt-get update && \
     espeak-ng \
     git  # Added to handle installing plugins from git
 
-# Install TTS for Coqui plugin here to reduce time and layer size
-RUN pip install tts==0.6.2
-
-
 ADD . /neon_audio
 WORKDIR /neon_audio
 
