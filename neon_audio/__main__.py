@@ -57,7 +57,7 @@ def on_started():
 def main(*args, **kwargs):
     if kwargs.get("config"):
         LOG.warning("Found `config` kwarg, but expect `audio_config`")
-        kwargs["audio_config"] = kwargs["config"]
+        kwargs["audio_config"] = kwargs.pop("config")
 
     init_config_dir()
     bus = get_messagebus()

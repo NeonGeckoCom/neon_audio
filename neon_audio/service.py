@@ -92,6 +92,7 @@ class NeonPlaybackService(SpeechService):
         """
         text = message.data.get("text")
         ident = message.context.get("ident") or "neon.get_tts.response"
+        LOG.info(f"Handling TTS request: {ident}")
         if not message.data.get("speaker"):
             LOG.warning(f"No speaker data with request, "
                         f"core defaults will be used.")
