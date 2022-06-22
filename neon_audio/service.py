@@ -80,6 +80,8 @@ class NeonPlaybackService(SpeechService):
                                alive_hook, started_hook, watchdog, bus)
         self.setDaemon(daemonic)
         self.config = audio_config or self.config
+        self.config["tts"]["fallback_module"] = self.config["tts"]["module"]
+        self._maybe_reload_tts()
         if self.status == ProcessState.ERROR and \
                 get_neon_device_type() == 'server':
             LOG.info("Ignoring audio service error on server device")
