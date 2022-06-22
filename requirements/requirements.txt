@@ -6,4 +6,5 @@ neon-utils~=0.17
 click~=8.0
 click-default-group~=1.2
 ovos-core~=0.0.3,>=0.0.4a21
-# python-vlc==1.1.2
+# TODO: Below patching missing ovos-core dependency
+pyyaml~=5.4
