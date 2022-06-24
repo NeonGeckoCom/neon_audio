@@ -5,6 +5,22 @@ tts:
   module: coqui
   fallback_module: neon_tts_mimic
   package_spec: neon-tts-plugin-coqui~=0.3
+Audio:
+  backends:
+    OCP:
+      type: ovos_common_play
+      active: true
+    simple:
+      type: ovos_audio_simple
+      active: true
+    vlc:
+      type: ovos_vlc
+      active: false
+  default-backend: OCP
+sounds:
+  start_listening: snd/start_listening.wav
+  end_listening: snd/end_listening.wav
+  acknowledge: snd/acknowledge.mp3
 MQ:
   server: mq.2021.us
   port: 5672
