@@ -82,7 +82,7 @@ def install_plugin(module, package, force_install):
     audio_config = Configuration()
 
     if force_install and not (package or module):
-        click.echo("Installing STT plugin from configuration")
+        click.echo("Installing TTS plugin from configuration")
         module = module or audio_config["tts"]["module"]
         package = package or audio_config["tts"].get("package_spec")
 
