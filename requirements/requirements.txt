@@ -8,5 +8,4 @@ neon-utils @ git+https://github.com/neondaniel/neon-skill-utils@FEAT_MycroftConf
 
 click~=8.0
 click-default-group~=1.2
-ovos-core[skills]~=0.0.3,>=0.0.4a29
-# TODO: skills extra to resolve ovos_workshop dependency error
+ovos-core~=0.0.3,>=0.0.4a29
