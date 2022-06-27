@@ -34,7 +34,7 @@ from neon_utils.logger import LOG
 from neon_audio.tts import TTSFactory
 mycroft.audio.tts.TTSFactory = TTSFactory
 
-from mycroft.audio.service import SpeechService
+from mycroft.audio.service import PlaybackService
 from mycroft.configuration import Configuration
 
 
@@ -58,7 +58,7 @@ def on_started():
     LOG.debug("Speech service started")
 
 
-class NeonPlaybackService(SpeechService):
+class NeonPlaybackService(PlaybackService):
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
@@ -78,8 +78,8 @@ class NeonPlaybackService(SpeechService):
             LOG.info("Updating global config with passed config")
             from neon_audio.utils import patch_config
             patch_config(audio_config)
-        SpeechService.__init__(self, ready_hook, error_hook, stopping_hook,
-                               alive_hook, started_hook, watchdog, bus)
+        PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
+                                 alive_hook, started_hook, watchdog, bus)
         assert self.config == Configuration()
         self.setDaemon(daemonic)
         from neon_utils.signal_utils import init_signal_handlers, \

@@ -26,6 +26,8 @@ docker run -d \
 --device=/dev/snd:/dev/snd \
 -e PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native \
 -e PULSE_COOKIE=/root/.config/pulse/cookie \
+-e DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS} \
+-e DISPLAY=${DISPLAY} \
 neon_audio
 ```
-# TODO: Add DBUS_SESSION_BUS_ADDRESS and DISPLAY for MPRIS compat
+# TODO: DBUS Connection errors
