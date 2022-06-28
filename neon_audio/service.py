@@ -28,8 +28,6 @@
 
 import mycroft.audio.tts
 
-from ovos_utils.process_utils import ProcessState
-from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
 from neon_audio.tts import TTSFactory
 mycroft.audio.tts.TTSFactory = TTSFactory
@@ -86,10 +84,6 @@ class NeonPlaybackService(PlaybackService):
             init_signal_bus
         init_signal_bus(self.bus)
         init_signal_handlers()
-        if self.status == ProcessState.ERROR and \
-                get_neon_device_type() == 'server':
-            LOG.info("Ignoring audio service error on server device")
-            self.status.set_started()
 
     def handle_get_tts(self, message):
         """

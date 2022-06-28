@@ -29,9 +29,9 @@
 
 from ovos_plugin_manager.tts import OVOSTTSFactory, get_tts_config
 from ovos_plugin_manager.templates.tts import TTSValidator
+from neon_utils.logger import LOG
+from ovos_config import Configuration
 from neon_audio.tts.neon import TTS, WrappedTTS
-
-from mycroft.configuration import Configuration
 
 
 class TTSFactory(OVOSTTSFactory):
@@ -55,6 +55,9 @@ class TTSFactory(OVOSTTSFactory):
         tts_config = get_tts_config(config)
         tts_lang = tts_config["lang"]
         clazz = OVOSTTSFactory.get_class(tts_config)
+        if not clazz:
+            LOG.error(f"Could not find plugin: {tts_config.get('module')}")
+            return
         tts = WrappedTTS(clazz, tts_lang, tts_config)
         tts.validator.validate()
         return tts

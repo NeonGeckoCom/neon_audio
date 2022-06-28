@@ -29,6 +29,8 @@ RUN apt-get update && \
     g++ \
     libsndfile1 \
     espeak-ng \
+    x11-apps \
+    xauth \
     git  # Added to handle installing plugins from git
 
 ADD . /neon_audio

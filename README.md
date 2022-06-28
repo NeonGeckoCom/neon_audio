@@ -23,10 +23,11 @@ docker run -d \
 --name=neon_audio \
 -v ~/.config/pulse/cookie:/tmp/pulse_cookie:ro \
 -v ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:ro \
+-v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:rw \
+-v /tmp/.X11-unix:/tmp/.X11-unix:ro \
 --device=/dev/snd:/dev/snd \
 -e PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native \
 -e PULSE_COOKIE=/tmp/pulse_cookie \
--e DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS} \
 -e DISPLAY=${DISPLAY} \
 neon_audio
 ```
