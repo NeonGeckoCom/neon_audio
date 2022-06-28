@@ -41,7 +41,7 @@ from neon_utils.message_utils import resolve_message
 from neon_utils.signal_utils import create_signal
 from neon_utils.logger import LOG
 
-from mycroft.configuration import Configuration
+from ovos_config.config import Configuration
 
 
 def get_requested_tts_languages(msg) -> list:

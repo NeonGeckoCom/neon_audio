@@ -36,7 +36,7 @@ from mycroft_bus_client import MessageBusClient, Message
 from neon_utils.configuration_utils import init_config_dir
 from neon_messagebus.service import NeonBusService
 
-from mycroft.configuration import Configuration
+from ovos_config.config import Configuration
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.service import NeonPlaybackService

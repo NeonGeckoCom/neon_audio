@@ -33,7 +33,7 @@ from neon_audio.tts import TTSFactory
 mycroft.audio.tts.TTSFactory = TTSFactory
 
 from mycroft.audio.service import PlaybackService
-from mycroft.configuration import Configuration
+from ovos_config.config import Configuration
 
 
 def on_ready():

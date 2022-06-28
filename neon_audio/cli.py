@@ -31,7 +31,7 @@ import click
 from click_default_group import DefaultGroup
 from neon_utils.packaging_utils import get_package_version_spec
 
-from mycroft.configuration import Configuration
+from ovos_config.config import Configuration
 
 
 @click.group("neon-audio", cls=DefaultGroup,
