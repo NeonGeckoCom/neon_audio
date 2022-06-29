@@ -42,4 +42,6 @@ RUN pip install wheel && \
 COPY docker_overlay/ /
 RUN chmod ugo+x /root/run.sh
 
+RUN neon-audio install-plugin -f
+
 CMD ["/root/run.sh"]
