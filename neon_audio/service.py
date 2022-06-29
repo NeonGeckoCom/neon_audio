@@ -78,7 +78,6 @@ class NeonPlaybackService(PlaybackService):
             patch_config(audio_config)
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus)
-        assert self.config == Configuration()
         self.setDaemon(daemonic)
         from neon_utils.signal_utils import init_signal_handlers, \
             init_signal_bus
