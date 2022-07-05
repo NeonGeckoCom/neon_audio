@@ -9,7 +9,6 @@ neon-utils @ git+https://github.com/neondaniel/neon-skill-utils@FEAT_MycroftConf
 
 click~=8.0
 click-default-group~=1.2
-# ovos-core[audio]~=0.0.3,>=0.0.4a29
-ovos-core[audio] @ git+https://github.com/neonjarbas/ovos-core@refactor/ovos_config_pkg#egg=ovos-core
+ovos-core[audio]~=0.0.3,>=0.0.4a34
 # TODO: Below patching OCP plugin dependency
 ovos-workshop>=0.0.7a9
