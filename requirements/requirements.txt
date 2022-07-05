@@ -1,8 +1,7 @@
 mycroft-messagebus-client~=0.9,>0.9.3
 # ovos_utils~=0.0.12
 ovos_utils @ git+https://github.com/neondaniel/ovos_utils@FEAT_YamlConfig
-# ovos-config~=0.0
-ovos-config @ git+https://github.com/openvoiceos/ovos-config@FIX_ConfigConstraints
+ovos-config~=0.0,>=0.0.2a3
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0.4
 # neon-utils~=0.17
