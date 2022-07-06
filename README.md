@@ -31,4 +31,3 @@ docker run -d \
 -e DISPLAY=${DISPLAY} \
 neon_audio
 ```
-# TODO: DBUS Connection errors
