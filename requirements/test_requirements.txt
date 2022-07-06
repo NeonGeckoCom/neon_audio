@@ -1,4 +1,4 @@
-neon-tts-plugin-larynx-server
+neon-tts-plugin-larynx-server>=0.0.5a0
 # neon-messagebus~=0.1,>=0.1.2a0
 neon-messagebus @ git+https://github.com/neongeckocom/neon_messagebus@FEAT_MycroftConfigCompat
 neon-lang-plugin-libretranslate~=0.1,>=0.1.2
