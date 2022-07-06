@@ -70,7 +70,7 @@ class TTSBaseClassTests(unittest.TestCase):
             shutil.rmtree(cls.test_cache_dir)
         if os.path.exists(cls.test_conf_dir):
             shutil.rmtree(cls.test_conf_dir)
-        os.environ.pop("NEON_CONFIG_PATH")
+        os.environ.pop("XDG_CACHE_HOME")
 
     def test_class_init(self):
         from ovos_plugin_manager.templates.tts import TTS
