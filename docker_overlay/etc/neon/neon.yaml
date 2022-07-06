@@ -1,0 +1,30 @@
+play_wav_cmdline: "play %1"
+play_mp3_cmdline: "play %1"
+play_ogg_cmdline: "play %1"
+tts:
+  module: coqui
+  fallback_module: neon_tts_mimic
+  package_spec: neon-tts-plugin-coqui~=0.3
+Audio:
+  backends:
+    OCP:
+      type: ovos_common_play
+      active: true
+      dbus_type: system
+    simple:
+      type: ovos_audio_simple
+      active: true
+    vlc:
+      type: ovos_vlc
+      active: false
+  default-backend: OCP
+MQ:
+  server: mq.2021.us
+  port: 5672
+  users:
+    mq_handler:
+      user: neon_api_utils
+      password: Klatchat2021
+signal:
+  use_signal_files: false
+  max_wait_seconds: 300

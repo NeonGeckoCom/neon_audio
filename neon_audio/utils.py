@@ -31,6 +31,20 @@ from neon_utils.logger import LOG
 from neon_utils.packaging_utils import get_package_dependencies
 
 
+def patch_config(config: dict = None):
+    """
+    Write the specified speech configuration to the global config file
+    :param config: Mycroft-compatible configuration override
+    """
+    from ovos_config.config import LocalConf
+    from ovos_config.locations import USER_CONFIG
+
+    config = config or dict()
+    local_config = LocalConf(USER_CONFIG)
+    local_config.update(config)
+    local_config.store()
+
+
 def _plugin_to_package(plugin: str) -> str:
     """
     Get a PyPI spec for a known plugin entrypoint
@@ -65,3 +79,14 @@ def install_tts_plugin(plugin: str) -> bool:
     returned = pip.main(['install', _plugin_to_package(plugin), "-c", tmp_file])
     LOG.info(f"pip status: {returned}")
     return returned == 0
+
+
+def use_neon_audio(func):
+    """
+    Wrapper to ensure call originates from neon_audio for stack checks.
+    This is used for ovos-utils config platform detection which uses the stack
+    to determine which module config to return.
+    """
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper

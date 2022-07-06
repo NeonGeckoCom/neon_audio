@@ -40,7 +40,6 @@ from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
 from neon_utils.signal_utils import check_for_signal
-from neon_utils.configuration_utils import get_neon_local_config
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.tts import WrappedTTS
@@ -55,10 +54,7 @@ class TTSBaseClassTests(unittest.TestCase):
         cls.test_cache_dir = join(dirname(__file__), "test_cache")
         cls.test_conf_dir = join(dirname(__file__), "config")
         os.makedirs(cls.test_conf_dir, exist_ok=True)
-        os.environ["NEON_CONFIG_PATH"] = cls.test_conf_dir
-        config = get_neon_local_config()
-        config["dirVars"]["cacheDir"] = cls.test_cache_dir
-        config.write_changes()
+        os.environ["XDG_CACHE_HOME"] = cls.test_cache_dir
         cls.config = {"key": "val"}
         cls.lang = "en-us"
         cls.tts = WrappedTTS(DummyTTS, cls.lang, cls.config)
@@ -74,7 +70,7 @@ class TTSBaseClassTests(unittest.TestCase):
             shutil.rmtree(cls.test_cache_dir)
         if os.path.exists(cls.test_conf_dir):
             shutil.rmtree(cls.test_conf_dir)
-        os.environ.pop("NEON_CONFIG_PATH")
+        os.environ.pop("XDG_CACHE_HOME")
 
     def test_class_init(self):
         from ovos_plugin_manager.templates.tts import TTS
@@ -173,6 +169,35 @@ class TTSUtilTests(unittest.TestCase):
         self.assertTrue(install_tts_plugin("coqui"))
         self.assertTrue(install_tts_plugin("neon-tts-plugin-coqui"))
         self.assertFalse(install_tts_plugin("neon-tts-plugin-invalid"))
+
+    def test_patch_config(self):
+        import json
+        from neon_audio.utils import use_neon_audio
+        from neon_utils.configuration_utils import init_config_dir
+        test_config_dir = os.path.join(os.path.dirname(__file__), "config")
+        os.makedirs(test_config_dir, exist_ok=True)
+        os.environ["XDG_CONFIG_HOME"] = test_config_dir
+        use_neon_audio(init_config_dir)()
+
+        with open(join(test_config_dir, "OpenVoiceOS", 'ovos.conf')) as f:
+            ovos_conf = json.load(f)
+        self.assertEqual(ovos_conf['submodule_mappings']['neon_audio'],
+                         "neon_core")
+        self.assertIsInstance(ovos_conf['module_overrides']['neon_core'], dict)
+
+        from neon_audio.utils import patch_config
+        import yaml
+        test_config = {"new_key": {'val': True}}
+        patch_config(test_config)
+        conf_file = os.path.join(test_config_dir, 'neon',
+                                 'neon.yaml')
+        self.assertTrue(os.path.isfile(conf_file))
+        with open(conf_file) as f:
+            config = yaml.safe_load(f)
+
+        self.assertTrue(config['new_key']['val'])
+        shutil.rmtree(test_config_dir)
+        os.environ.pop("XDG_CONFIG_HOME")
 
 
 if __name__ == '__main__':

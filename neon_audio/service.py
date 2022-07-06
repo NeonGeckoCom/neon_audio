@@ -25,19 +25,14 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from threading import Thread
 
 import mycroft.audio.tts
-from ovos_utils.process_utils import ProcessState
 
-from neon_utils.configuration_utils import get_neon_device_type
 from neon_utils.logger import LOG
-
 from neon_audio.tts import TTSFactory
 mycroft.audio.tts.TTSFactory = TTSFactory
 
-
-from mycroft.audio.service import SpeechService
+from mycroft.audio.service import PlaybackService
 
 
 def on_ready():
@@ -60,7 +55,7 @@ def on_started():
     LOG.debug("Speech service started")
 
 
-class NeonPlaybackService(SpeechService):
+class NeonPlaybackService(PlaybackService):
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
@@ -76,16 +71,17 @@ class NeonPlaybackService(SpeechService):
         :param daemonic: if True, run this thread as a daemon
         :param bus: Connected MessageBusClient
         """
-        SpeechService.__init__(self, ready_hook, error_hook, stopping_hook,
-                               alive_hook, started_hook, watchdog, bus)
+        if audio_config:
+            LOG.info("Updating global config with passed config")
+            from neon_audio.utils import patch_config
+            patch_config(audio_config)
+        PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
+                                 alive_hook, started_hook, watchdog, bus)
         self.setDaemon(daemonic)
-        self.config = audio_config or self.config
-        self.config["tts"]["fallback_module"] = self.config["tts"]["module"]
-        self._maybe_reload_tts()
-        if self.status == ProcessState.ERROR and \
-                get_neon_device_type() == 'server':
-            LOG.info("Ignoring audio service error on server device")
-            self.status.set_started()
+        from neon_utils.signal_utils import init_signal_handlers, \
+            init_signal_bus
+        init_signal_bus(self.bus)
+        init_signal_handlers()
 
     def handle_get_tts(self, message):
         """

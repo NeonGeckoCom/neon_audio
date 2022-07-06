@@ -31,7 +31,7 @@ from neon_utils.configuration_utils import init_config_dir
 from neon_utils.logger import LOG
 
 from mycroft.lock import Lock
-from mycroft.configuration import setup_locale
+from ovos_config import setup_locale
 
 
 def on_ready():

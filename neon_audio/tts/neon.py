@@ -29,18 +29,19 @@
 import hashlib
 import inspect
 import os
-from os.path import expanduser, dirname, join
 
-from json_database import JsonStorageXDG, JsonStorage
-from mycroft.util.log import LOG
+from os.path import dirname
+from json_database import JsonStorageXDG
 from mycroft_bus_client.message import Message
-from neon_utils.configuration_utils import get_neon_lang_config, get_neon_user_config, get_neon_local_config
-from ovos_plugin_manager.language import OVOSLangDetectionFactory, OVOSLangTranslationFactory
+from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
+    OVOSLangTranslationFactory
 from ovos_plugin_manager.templates.tts import TTS
-
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
 from neon_utils.signal_utils import create_signal
+from neon_utils.logger import LOG
+
+from ovos_config.config import Configuration
 
 
 def get_requested_tts_languages(msg) -> list:
@@ -50,7 +51,7 @@ def get_requested_tts_languages(msg) -> list:
     :return: List of TTS dict data
     """
     profiles = msg.context.get("user_profiles") or \
-               msg.context.get("nick_profiles")
+        msg.context.get("nick_profiles")
     tts_name = "Neon"
     default_gender = "female"
     tts_reqs = []
@@ -73,7 +74,8 @@ def get_requested_tts_languages(msg) -> list:
                 username = profile.get("user", {}).get("username")
                 lang_prefs = profile.get("speech") or dict()
                 language = lang_prefs.get('tts_language') or 'en-us'
-                second_lang = lang_prefs.get('secondary_tts_language') or language
+                second_lang = lang_prefs.get('secondary_tts_language') or \
+                    language
                 gender = lang_prefs.get('tts_gender') or default_gender
                 LOG.debug(f"{username} requesting {gender} {language}")
                 primary = {"speaker": tts_name,
@@ -99,7 +101,9 @@ def get_requested_tts_languages(msg) -> list:
 
         # General non-server response, use yml configuration
         else:
-            LOG.warning("No profile information with request")
+            # TODO: Deprecate this clause
+            from neon_utils.configuration_utils import get_neon_user_config
+            LOG.error("No profile information with request")
             user_config = get_neon_user_config()["speech"]
             tts_reqs.append({"speaker": tts_name,
                              "language": user_config["tts_language"],
@@ -137,32 +141,25 @@ class WrappedTTS(TTS):
         into the selected TTS engine """
         base_engine = base_engine(*args, **kwargs)
 
-        # TODO ovos-core now also has an internal concept of secondary languages
-        # unify the config !
-        # language_config = Configuration.get()["language"]
-        language_config = get_neon_lang_config()
+        language_config = Configuration().get("language") or dict()
 
         base_engine.keys = {}
 
         base_engine.language_config = language_config
-        base_engine.lang = base_engine.lang or language_config.get("user", "en-us")
+        base_engine.lang = base_engine.lang or language_config.get("user",
+                                                                   "en-us")
         try:
-            base_engine.lang_detector = OVOSLangDetectionFactory.create(language_config)
-            base_engine.translator = OVOSLangTranslationFactory.create(language_config)
+            base_engine.lang_detector = \
+                OVOSLangDetectionFactory.create(language_config)
+            base_engine.translator = \
+                OVOSLangTranslationFactory.create(language_config)
         except ValueError as e:
             LOG.error(e)
             base_engine.lang_detector = None
             base_engine.translator = None
 
-        # TODO should cache be handled directly in each individual plugin?
-        #   would also allow to do it per engine which can be advantageous
-        neon_cache_dir = get_neon_local_config()['dirVars'].get('cacheDir') or "~/.cache/neon"
-        if neon_cache_dir:
-            cache_dir = expanduser(neon_cache_dir)
-            cached_translations = JsonStorage(join(cache_dir, "tx_cache.json"))
-        else:
-            cached_translations = JsonStorageXDG("tx_cache.json", subfolder="neon")
-            cache_dir = dirname(cached_translations.path)
+        cached_translations = JsonStorageXDG("tx_cache.json", subfolder="neon")
+        cache_dir = dirname(cached_translations.path)
 
         os.makedirs(cache_dir, exist_ok=True)
         base_engine.cache_dir = cache_dir
@@ -269,9 +266,10 @@ class WrappedTTS(TTS):
             # TODO dedicated klat handler/plugin
             if message.context.get("klat_data"):
                 LOG.info("Sending klat.response")
-                self.bus.emit(message.forward("klat.response",
-                                              {"responses": responses,
-                                               "speaker": message.data.get("speaker")}))
+                self.bus.emit(
+                    message.forward("klat.response",
+                                    {"responses": responses,
+                                     "speaker": message.data.get("speaker")}))
             else:
                 create_signal("isSpeaking")
                 # Local user has multiple configured languages (or genders)
