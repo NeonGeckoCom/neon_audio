@@ -40,7 +40,6 @@ from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
 from neon_utils.signal_utils import check_for_signal
-from neon_utils.configuration_utils import _get_neon_local_config
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.tts import WrappedTTS
@@ -55,10 +54,7 @@ class TTSBaseClassTests(unittest.TestCase):
         cls.test_cache_dir = join(dirname(__file__), "test_cache")
         cls.test_conf_dir = join(dirname(__file__), "config")
         os.makedirs(cls.test_conf_dir, exist_ok=True)
-        os.environ["NEON_CONFIG_PATH"] = cls.test_conf_dir
-        config = _get_neon_local_config()
-        config["dirVars"]["cacheDir"] = cls.test_cache_dir
-        config.write_changes()
+        os.environ["XDG_CACHE_HOME"] = cls.test_cache_dir
         cls.config = {"key": "val"}
         cls.lang = "en-us"
         cls.tts = WrappedTTS(DummyTTS, cls.lang, cls.config)
