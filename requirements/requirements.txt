@@ -4,7 +4,7 @@ ovos_utils @ git+https://github.com/neondaniel/ovos_utils@FEAT_YamlConfig
 ovos-config~=0.0,>=0.0.2a3
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0.4
-neon-utils>=1.0.0a11,<2.0.0
+neon-utils[network]~=1.0.0a11
 
 click~=8.0
 click-default-group~=1.2
