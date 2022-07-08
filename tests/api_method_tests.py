@@ -32,6 +32,7 @@ import os
 import sys
 import unittest
 
+from mock.mock import Mock
 from mycroft_bus_client import MessageBusClient, Message
 from neon_utils.configuration_utils import init_config_dir
 from neon_messagebus.service import NeonBusService
@@ -78,8 +79,14 @@ class TestAPIMethods(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
-        cls.messagebus.shutdown()
-        cls.audio_service.shutdown()
+        try:
+            cls.messagebus.shutdown()
+        except Exception as e:
+            print(e)
+        try:
+            cls.audio_service.shutdown()
+        except Exception as e:
+            print(e)
 
     def test_get_tts_no_sentence(self):
         context = {"client": "tester",
@@ -119,6 +126,32 @@ class TestAPIMethods(unittest.TestCase):
     # TODO: Test with multiple languages
     def test_get_tts_valid_speaker(self):
         pass
+
+    def test_handle_speak(self):
+        real_method = self.audio_service.execute_tts
+        mock_tts = Mock()
+        self.audio_service.execute_tts = mock_tts
+        message_invalid_destination = Message("speak",
+                                              {"utterance": "test"},
+                                              {"ident": "test",
+                                               "destination": ['invalid']})
+        self.audio_service.handle_speak(message_invalid_destination)
+        mock_tts.assert_called_with("test", "test", False)
+        message_valid_destination = Message("speak",
+                                            {"utterance": "test1"},
+                                            {"ident": "test2",
+                                             "destination": ['invalid',
+                                                             'audio']})
+        self.audio_service.handle_speak(message_valid_destination)
+        mock_tts.assert_called_with("test1", "test2", False)
+
+        message_no_destination = Message("speak",
+                                         {"utterance": "test3"},
+                                         {"ident": "test4"})
+        self.audio_service.handle_speak(message_no_destination)
+        mock_tts.assert_called_with("test3", "test4", False)
+
+        self.audio_service.execute_tts = real_method
 
 
 if __name__ == '__main__':
