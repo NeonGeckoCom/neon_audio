@@ -3,7 +3,7 @@ play_mp3_cmdline: "play %1"
 play_ogg_cmdline: "play %1"
 tts:
   module: coqui
-  fallback_module: neon_tts_mimic
+  fallback_module: ovos-tts-plugin-mimic
   package_spec: neon-tts-plugin-coqui~=0.3
 Audio:
   backends:

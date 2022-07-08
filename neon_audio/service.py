@@ -36,23 +36,23 @@ from mycroft.audio.service import PlaybackService
 
 
 def on_ready():
-    LOG.info('Speech service is ready.')
+    LOG.info('Playback service is ready.')
 
 
 def on_stopping():
-    LOG.info('Speech service is shutting down...')
+    LOG.info('Playback service is shutting down...')
 
 
 def on_error(e='Unknown'):
-    LOG.error('Speech service failed to launch ({}).'.format(repr(e)))
+    LOG.error('Playback service failed to launch ({}).'.format(repr(e)))
 
 
 def on_alive():
-    LOG.debug("Speech service alive")
+    LOG.debug("Playback service alive")
 
 
 def on_started():
-    LOG.debug("Speech service started")
+    LOG.debug("Playback service started")
 
 
 class NeonPlaybackService(PlaybackService):
@@ -83,6 +83,12 @@ class NeonPlaybackService(PlaybackService):
         init_signal_bus(self.bus)
         init_signal_handlers()
 
+    def handle_speak(self, message):
+        if "audio" not in message.context['destination']:
+            LOG.warning("Adding audio to destination context")
+            message.context['destination'].append('audio')
+        PlaybackService.handle_speak(self, message)
+
     def handle_get_tts(self, message):
         """
         Handle a request to get TTS only
@@ -111,4 +117,4 @@ class NeonPlaybackService(PlaybackService):
 
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
-        super().init_messagebus()
+        PlaybackService.init_messagebus(self)

@@ -34,26 +34,6 @@ from mycroft.lock import Lock
 from ovos_config import setup_locale
 
 
-def on_ready():
-    LOG.info('Audio service is ready.')
-
-
-def on_error(e='Unknown'):
-    LOG.error('Audio service failed to launch ({}).'.format(repr(e)))
-
-
-def on_stopping():
-    LOG.info('Audio service is shutting down...')
-
-
-def on_alive():
-    pass
-
-
-def on_started():
-    pass
-
-
 def main(*args, **kwargs):
     if kwargs.get("config"):
         LOG.warning("Found `config` kwarg, but expect `audio_config`")
