@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, '3.10']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -61,8 +61,6 @@ jobs:
       - name: Test API Methods
         run: |
           pytest tests/api_method_tests.py --doctest-modules --junitxml=tests/api-method-test-results.xml
-        env:
-          TTS_URL: https://mtts.2022.us
       - name: Upload API Method test results
         uses: actions/upload-artifact@v2
         with:
