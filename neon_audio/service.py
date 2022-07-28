@@ -31,6 +31,8 @@ import ovos_plugin_manager.templates.tts
 
 from neon_utils.logger import LOG
 from neon_audio.tts import TTSFactory
+from neon_utils.messagebus_utils import get_messagebus
+
 mycroft.audio.tts.TTSFactory = TTSFactory
 
 from mycroft.audio.service import PlaybackService
@@ -76,7 +78,7 @@ class NeonPlaybackService(PlaybackService):
             LOG.info("Updating global config with passed config")
             from neon_audio.utils import patch_config
             patch_config(audio_config)
-
+        bus = bus or get_messagebus()
         # Override all the previously loaded signal methods
         from neon_utils.signal_utils import init_signal_handlers, \
             init_signal_bus
