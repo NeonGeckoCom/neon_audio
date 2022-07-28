@@ -258,6 +258,9 @@ class WrappedTTS(TTS):
             TTS engine get_tts method
         """
         if message:
+            # Make sure to set the speaking signal now
+            if not message.context.get("klat_data"):
+                create_signal("isSpeaking")
             # TODO: Should sentence and ident be added to message context? DM
             message.data["text"] = sentence
             responses = self.get_multiple_tts(message, **kwargs)
@@ -271,7 +274,6 @@ class WrappedTTS(TTS):
                                     {"responses": responses,
                                      "speaker": message.data.get("speaker")}))
             else:
-                create_signal("isSpeaking")
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
                     # get audio for selected voice gender
