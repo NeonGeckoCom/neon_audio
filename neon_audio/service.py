@@ -84,10 +84,21 @@ class NeonPlaybackService(PlaybackService):
         init_signal_handlers()
 
     def handle_speak(self, message):
+        # Handle request to use fallback TTS (i.e. for a different voice)
+        if (message.data.get("speaker") or dict()).get("use_fallback_tts"):
+            ident = message.context.get('ident') or 'unknown'
+            with self.lock:
+                utterance = message.data['utterance']
+                listen = message.data.get('expect_response', False)
+                self.fallback_tts.execute(utterance, ident, listen)
+            return
+
+        # Ensure message routing allows message to be processed here
         message.context.setdefault('destination', [])
         if "audio" not in message.context['destination']:
             LOG.warning("Adding audio to destination context")
             message.context['destination'].append('audio')
+
         PlaybackService.handle_speak(self, message)
 
     def handle_get_tts(self, message):

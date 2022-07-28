@@ -62,7 +62,7 @@ def get_requested_tts_languages(msg) -> list:
             speaker = msg.data.get("speaker")
             tts_reqs.append({"speaker": speaker["name"],
                              "language": speaker["language"],
-                             "gender": speaker["gender"],
+                             "gender": speaker.get("gender") or default_gender,
                              "voice": speaker.get("voice")
                              })
             LOG.debug(f">>> speaker={speaker}")
