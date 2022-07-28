@@ -27,6 +27,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import mycroft.audio.tts
+import ovos_plugin_manager.templates.tts
 
 from neon_utils.logger import LOG
 from neon_audio.tts import TTSFactory
@@ -75,13 +76,20 @@ class NeonPlaybackService(PlaybackService):
             LOG.info("Updating global config with passed config")
             from neon_audio.utils import patch_config
             patch_config(audio_config)
+
+        # Override all the previously loaded signal methods
+        from neon_utils.signal_utils import init_signal_handlers, \
+            init_signal_bus
+        init_signal_bus(bus)
+        init_signal_handlers()
+        from neon_utils.signal_utils import create_signal, check_for_signal
+        mycroft.audio.service.check_for_signal = check_for_signal
+        ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
+        ovos_plugin_manager.templates.tts.create_signal = create_signal
+
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus)
         self.setDaemon(daemonic)
-        from neon_utils.signal_utils import init_signal_handlers, \
-            init_signal_bus
-        init_signal_bus(self.bus)
-        init_signal_handlers()
 
     def handle_speak(self, message):
         message.context.setdefault('destination', [])
