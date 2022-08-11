@@ -205,6 +205,7 @@ class WrappedTTS(TTS):
         for request in tts_requested:
             lang = kwargs["lang"] = request["language"]
             # Check if requested tts lang matches internal (text) lang
+            # TODO: `self.lang` should come from the incoming message
             if lang.split("-")[0] != self.lang.split("-")[0]:
                 self.cached_translations.setdefault(lang, {})
 
@@ -267,7 +268,7 @@ class WrappedTTS(TTS):
             LOG.debug(f"responses={responses}")
 
             # TODO dedicated klat handler/plugin
-            if message.context.get("klat_data"):
+            if "klat_data" in message.context:
                 LOG.info("Sending klat.response")
                 self.bus.emit(
                     message.forward("klat.response",

@@ -132,6 +132,20 @@ class TTSBaseClassTests(unittest.TestCase):
         message = Message("test")
         self.tts.execute(sentence, ident, message=message)
         self.tts.get_multiple_tts.assert_called_once_with(message)
+
+        # Test klat response
+        klat_response = Mock()
+        # Check called with klat_data context
+        self.tts.bus.once('klat.response', klat_response)
+        message.context['klat_data'] = dict()
+        self.tts.execute(sentence, ident, message=message)
+        klat_response.assert_called_once()
+        # Check not called without klat_data context
+        self.tts.bus.once('klat.response', klat_response)
+        message.context.pop('klat_data')
+        self.tts.execute(sentence, ident, message=message)
+        klat_response.assert_called_once()
+
         self.tts.get_multiple_tts = default_get_multiple_tts
 
     def test_get_multiple_tts(self):
