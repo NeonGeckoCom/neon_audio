@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.8-slim as base
 
 LABEL vendor=neon.ai \
     ai.neon.name="neon-audio"
@@ -43,3 +43,6 @@ RUN chmod ugo+x /root/run.sh
 RUN neon-audio install-plugin -f
 
 CMD ["/root/run.sh"]
+
+FROM base as default_model
+RUN neon-audio init-plugin

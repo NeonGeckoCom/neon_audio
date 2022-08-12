@@ -81,6 +81,20 @@ def install_tts_plugin(plugin: str) -> bool:
     return returned == 0
 
 
+def init_tts_plugin(plugin: str):
+    """
+    Initialize a specified plugin. Useful for doing one-time initialization
+    before deployment
+    """
+    from ovos_plugin_manager.tts import load_tts_plugin
+    plug = load_tts_plugin(plugin)
+    if plug:
+        LOG.info(f"Initializing plugin: {plugin}")
+        plug()
+    else:
+        LOG.warning(f"Could not find plugin: {plugin}")
+
+
 def use_neon_audio(func):
     """
     Wrapper to ensure call originates from neon_audio for stack checks.
