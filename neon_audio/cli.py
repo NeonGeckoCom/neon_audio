@@ -90,3 +90,12 @@ def install_plugin(module, package, force_install):
         install_tts_plugin(package or module)
         if not module:
             click.echo("Plugin specified without module")
+
+
+@neon_audio_cli.command(help="Install a TTS Plugin")
+@click.option("--plugin", "-p", default=None,
+              help="TTS module to init")
+def init_plugin(plugin):
+    from neon_audio.utils import init_tts_plugin
+    plugin = plugin or Configuration()["tts"]["module"]
+    init_tts_plugin(plugin)
