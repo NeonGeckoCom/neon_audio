@@ -21,12 +21,13 @@ to start the container.
 docker run -d \
 --network=host \
 --name=neon_audio \
--v ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro \
+-v ~/.config/pulse/cookie:/tmp/pulse_cookie:ro \
 -v ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:ro \
--v ${NEON_CONFIG_DIR}:/config \
+-v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:rw \
+-v /tmp/.X11-unix:/tmp/.X11-unix:ro \
 --device=/dev/snd:/dev/snd \
 -e PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native \
--e PULSE_COOKIE=/root/.config/pulse/cookie \
+-e PULSE_COOKIE=/tmp/pulse_cookie \
+-e DISPLAY=${DISPLAY} \
 neon_audio
 ```
->*Note:* The above example assumes `NEON_CONFIG_DIR` contains valid configuration

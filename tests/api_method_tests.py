@@ -32,46 +32,61 @@ import os
 import sys
 import unittest
 
-from multiprocessing import Process
-
+from mock.mock import Mock
 from mycroft_bus_client import MessageBusClient, Message
-from neon_utils.configuration_utils import get_neon_audio_config
+from neon_utils.configuration_utils import init_config_dir
 from neon_messagebus.service import NeonBusService
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from neon_audio.__main__ import main as neon_audio_main
+from ovos_config.config import Configuration
 
-TEST_CONFIG = get_neon_audio_config()
-TEST_CONFIG["tts"]["module"] = "mozilla_remote"
-TEST_CONFIG["tts"]["mozilla_remote"] = {"api_url": os.environ.get("TTS_URL")}
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from neon_audio.service import NeonPlaybackService
+from neon_audio.utils import use_neon_audio
 
 
 class TestAPIMethods(unittest.TestCase):
-    bus_thread = None
-    audio_thread = None
-
     @classmethod
     def setUpClass(cls) -> None:
-        cls.bus_thread = NeonBusService(daemonic=True)
-        cls.audio_thread = Process(target=neon_audio_main,
-                                   kwargs={"config": TEST_CONFIG},
-                                   daemon=False)
-        cls.bus_thread.start()
-        cls.audio_thread.start()
+        test_config_dir = os.path.join(os.path.dirname(__file__), "config")
+        os.makedirs(test_config_dir, exist_ok=True)
+        os.environ["XDG_CONFIG_HOME"] = test_config_dir
+        use_neon_audio(init_config_dir)()
+
+        test_config = Configuration()
+        test_config["tts"]["module"] = "neon-tts-plugin-larynx-server"
+        test_config["tts"]["neon-tts-plugin-larynx-server"] = \
+            {"host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
+        assert test_config["tts"]["module"] == "neon-tts-plugin-larynx-server"
+
+        cls.messagebus = NeonBusService(debug=True, daemonic=True)
+        cls.messagebus.start()
+        cls.audio_service = NeonPlaybackService(audio_config=test_config,
+                                                daemonic=True)
+        cls.audio_service.start()
         cls.bus = MessageBusClient()
         cls.bus.run_in_thread()
-        cls.bus.connected_event.wait(30)
+        if not cls.bus.connected_event.wait(30):
+            raise TimeoutError("Bus not connected after 60 seconds")
         alive = False
-        while not alive:
+        timeout = time() + 120
+        while not alive and time() < timeout:
             message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
             if message:
                 alive = message.data.get("status")
+        if not alive:
+            raise TimeoutError("Speech module not ready after 120 seconds")
 
     @classmethod
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
-        cls.bus_thread.shutdown()
-        cls.audio_thread.terminate()
+        try:
+            cls.messagebus.shutdown()
+        except Exception as e:
+            print(e)
+        try:
+            cls.audio_service.shutdown()
+        except Exception as e:
+            print(e)
 
     def test_get_tts_no_sentence(self):
         context = {"client": "tester",
@@ -111,6 +126,32 @@ class TestAPIMethods(unittest.TestCase):
     # TODO: Test with multiple languages
     def test_get_tts_valid_speaker(self):
         pass
+
+    def test_handle_speak(self):
+        real_method = self.audio_service.execute_tts
+        mock_tts = Mock()
+        self.audio_service.execute_tts = mock_tts
+        message_invalid_destination = Message("speak",
+                                              {"utterance": "test"},
+                                              {"ident": "test",
+                                               "destination": ['invalid']})
+        self.audio_service.handle_speak(message_invalid_destination)
+        mock_tts.assert_called_with("test", "test", False)
+        message_valid_destination = Message("speak",
+                                            {"utterance": "test1"},
+                                            {"ident": "test2",
+                                             "destination": ['invalid',
+                                                             'audio']})
+        self.audio_service.handle_speak(message_valid_destination)
+        mock_tts.assert_called_with("test1", "test2", False)
+
+        message_no_destination = Message("speak",
+                                         {"utterance": "test3"},
+                                         {"ident": "test4"})
+        self.audio_service.handle_speak(message_no_destination)
+        mock_tts.assert_called_with("test3", "test4", False)
+
+        self.audio_service.execute_tts = real_method
 
 
 if __name__ == '__main__':

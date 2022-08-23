@@ -27,9 +27,10 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from neon_utils.configuration_utils import get_neon_audio_config
 from ovos_plugin_manager.tts import OVOSTTSFactory, get_tts_config
 from ovos_plugin_manager.templates.tts import TTSValidator
+from neon_utils.logger import LOG
+from ovos_config import Configuration
 from neon_audio.tts.neon import TTS, WrappedTTS
 
 
@@ -46,12 +47,17 @@ class TTSFactory(OVOSTTSFactory):
             "module": <engine_name>
         }
         """
-        config = config or get_neon_audio_config()
-        config["lang"] = config.get("language", {}).get("user") or config.get("lang", "en-us")
+        config = config or Configuration()
+        config["lang"] = config.get("language",
+                                    {}).get("user") or config.get("lang",
+                                                                  "en-us")
 
         tts_config = get_tts_config(config)
         tts_lang = tts_config["lang"]
         clazz = OVOSTTSFactory.get_class(tts_config)
+        if not clazz:
+            LOG.error(f"Could not find plugin: {tts_config.get('module')}")
+            return
         tts = WrappedTTS(clazz, tts_lang, tts_config)
         tts.validator.validate()
         return tts
