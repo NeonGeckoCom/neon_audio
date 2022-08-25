@@ -153,6 +153,40 @@ class TestAPIMethods(unittest.TestCase):
 
         self.audio_service.execute_tts = real_method
 
+    def test_get_tts_supported_languages(self):
+        real_tts = self.audio_service.tts
+        resp = self.bus.wait_for_response(Message(
+            "neon.get_languages_tts", {}, {'ctx': True}
+        ))
+        self.assertIsInstance(resp, Message)
+        self.assertTrue(resp.context.get('ctx'))
+
+        self.assertEqual(resp.data['tts_langs'],
+                         list(real_tts.available_languages) or ['en-us'])
+
+        mock_languages = ('en-us', 'es', 'fr-fr', 'fr-ca')
+        from ovos_plugin_manager.templates.tts import TTS
+
+        class MockTTS(TTS):
+            def __init__(self):
+                super(MockTTS, self).__init__()
+
+            @property
+            def available_languages(self):
+                return mock_languages
+
+            def execute(self, *args, **kwargs):
+                pass
+
+        mock_tts = MockTTS()
+        self.audio_service.tts = mock_tts
+        resp = self.bus.wait_for_response(Message(
+            "neon.get_languages_tts", {}, {'ctx': True}
+        ))
+        self.assertEqual(resp.data['tts_langs'], list(mock_languages))
+
+        self.audio_service.tts = real_tts
+
 
 if __name__ == '__main__':
     unittest.main()
