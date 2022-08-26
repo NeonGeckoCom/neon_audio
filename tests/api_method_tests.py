@@ -156,12 +156,12 @@ class TestAPIMethods(unittest.TestCase):
     def test_get_tts_supported_languages(self):
         real_tts = self.audio_service.tts
         resp = self.bus.wait_for_response(Message(
-            "neon.get_languages_tts", {}, {'ctx': True}
+            "ovos.languages.tts", {}, {'ctx': True}
         ))
         self.assertIsInstance(resp, Message)
         self.assertTrue(resp.context.get('ctx'))
 
-        self.assertEqual(resp.data['tts_langs'],
+        self.assertEqual(resp.data['langs'],
                          list(real_tts.available_languages) or ['en-us'])
 
         mock_languages = ('en-us', 'es', 'fr-fr', 'fr-ca')
@@ -181,9 +181,9 @@ class TestAPIMethods(unittest.TestCase):
         mock_tts = MockTTS()
         self.audio_service.tts = mock_tts
         resp = self.bus.wait_for_response(Message(
-            "neon.get_languages_tts", {}, {'ctx': True}
+            "ovos.languages.tts", {}, {'ctx': True}
         ))
-        self.assertEqual(resp.data['tts_langs'], list(mock_languages))
+        self.assertEqual(resp.data['langs'], list(mock_languages))
 
         self.audio_service.tts = real_tts
 

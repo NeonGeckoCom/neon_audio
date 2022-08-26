@@ -126,17 +126,6 @@ class NeonPlaybackService(PlaybackService):
             self.bus.emit(message.reply(ident,
                                         data={"error": "No text provided."}))
 
-    def handle_get_languages_tts(self, message):
-        """
-        Handle a request for supported TTS languages
-        :param message: neon.get_languages_tts request
-        """
-        tts_langs = self.tts.available_languages or \
-            [self.config.get('language', {}).get('user') or 'en-us']
-        LOG.info(f"Got tts_langs: {tts_langs}")
-        self.bus.emit(message.response({'tts_langs': tts_langs}))
-
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
-        self.bus.on('neon.get_languages_tts', self.handle_get_languages_tts)
         PlaybackService.init_messagebus(self)
