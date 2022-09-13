@@ -95,6 +95,8 @@ class NeonPlaybackService(PlaybackService):
 
     def handle_speak(self, message):
         message.context.setdefault('destination', [])
+        if isinstance(message.context['destination'], str):
+            message.context['destination'] = [message.context['destination']]
         if "audio" not in message.context['destination']:
             LOG.warning("Adding audio to destination context")
             message.context['destination'].append('audio')
