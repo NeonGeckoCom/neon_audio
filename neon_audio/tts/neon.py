@@ -293,6 +293,8 @@ class WrappedTTS(TTS):
             responses = self.get_multiple_tts(message, **kwargs)
             LOG.debug(f"responses={responses}")
 
+            ident = message.data.get('speak_ident') or ident
+
             # TODO dedicated klat handler/plugin
             if "klat_data" in message.context:
                 LOG.info("Sending klat.response")

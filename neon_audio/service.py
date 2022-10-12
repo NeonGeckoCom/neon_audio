@@ -107,7 +107,7 @@ class NeonPlaybackService(PlaybackService):
 
         audio_finished = Event()
 
-        ident = message.context.get('ident')
+        ident = message.data.get('speak_ident') or message.context.get('ident')
 
         def handle_finished(_):
             audio_finished.set()
