@@ -29,7 +29,7 @@
 
 from ovos_plugin_manager.tts import OVOSTTSFactory, get_tts_config
 from ovos_plugin_manager.templates.tts import TTSValidator
-from neon_utils.logger import LOG
+from ovos_utils.log import LOG
 from ovos_config import Configuration
 from neon_audio.tts.neon import TTS, WrappedTTS
 

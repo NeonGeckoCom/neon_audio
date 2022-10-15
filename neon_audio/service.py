@@ -29,7 +29,7 @@
 import mycroft.audio.tts
 import ovos_plugin_manager.templates.tts
 
-from neon_utils.logger import LOG
+from ovos_utils.log import LOG
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
 
