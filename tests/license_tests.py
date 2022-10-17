@@ -19,7 +19,8 @@ license_overrides = {
     'sonopy': 'Apache-2.0',
     "python-dateutil": "Apache-2.0",
     "pyparsing": "MIT",
-    "exceptiongroup": "MIT"
+    "exceptiongroup": "MIT",
+    "idna": "BSD3"
 }
 # explicitly allow these packages that would fail otherwise
 whitelist = ["neon-audio",

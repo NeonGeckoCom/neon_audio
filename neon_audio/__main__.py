@@ -28,10 +28,11 @@
 
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import init_config_dir
-from neon_utils.logger import LOG
+from neon_utils.log_utils import init_log
+from ovos_utils.log import LOG
+from ovos_config.locale import setup_locale
 
 from mycroft.lock import Lock
-from ovos_config.locale import setup_locale
 
 
 def main(*args, **kwargs):
@@ -40,6 +41,7 @@ def main(*args, **kwargs):
         kwargs["audio_config"] = kwargs.pop("config")
 
     init_config_dir()
+    init_log(log_name="audio")
     bus = get_messagebus()
     kwargs["bus"] = bus
     from neon_utils.signal_utils import init_signal_bus, \
