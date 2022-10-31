@@ -131,12 +131,16 @@ class TestAPIMethods(unittest.TestCase):
         real_method = self.audio_service.execute_tts
         mock_tts = Mock()
         self.audio_service.execute_tts = mock_tts
+
+        # 'audio' not in destination
         message_invalid_destination = Message("speak",
                                               {"utterance": "test"},
                                               {"ident": "test",
                                                "destination": ['invalid']})
         self.audio_service.handle_speak(message_invalid_destination)
         mock_tts.assert_called_with("test", "test", False)
+
+        # 'audio' in destination
         message_valid_destination = Message("speak",
                                             {"utterance": "test1"},
                                             {"ident": "test2",
@@ -145,6 +149,15 @@ class TestAPIMethods(unittest.TestCase):
         self.audio_service.handle_speak(message_valid_destination)
         mock_tts.assert_called_with("test1", "test2", False)
 
+        # str 'audio' destination
+        message_valid_destination = Message("speak",
+                                            {"utterance": "test5"},
+                                            {"ident": "test6",
+                                             "destination": 'audio'})
+        self.audio_service.handle_speak(message_valid_destination)
+        mock_tts.assert_called_with("test5", "test6", False)
+
+        # no destination context
         message_no_destination = Message("speak",
                                          {"utterance": "test3"},
                                          {"ident": "test4"})
@@ -152,6 +165,40 @@ class TestAPIMethods(unittest.TestCase):
         mock_tts.assert_called_with("test3", "test4", False)
 
         self.audio_service.execute_tts = real_method
+
+    def test_get_tts_supported_languages(self):
+        real_tts = self.audio_service.tts
+        resp = self.bus.wait_for_response(Message(
+            "ovos.languages.tts", {}, {'ctx': True}
+        ))
+        self.assertIsInstance(resp, Message)
+        self.assertTrue(resp.context.get('ctx'))
+
+        self.assertEqual(resp.data['langs'],
+                         list(real_tts.available_languages) or ['en-us'])
+
+        mock_languages = ('en-us', 'es', 'fr-fr', 'fr-ca')
+        from ovos_plugin_manager.templates.tts import TTS
+
+        class MockTTS(TTS):
+            def __init__(self):
+                super(MockTTS, self).__init__()
+
+            @property
+            def available_languages(self):
+                return mock_languages
+
+            def execute(self, *args, **kwargs):
+                pass
+
+        mock_tts = MockTTS()
+        self.audio_service.tts = mock_tts
+        resp = self.bus.wait_for_response(Message(
+            "ovos.languages.tts", {}, {'ctx': True}
+        ))
+        self.assertEqual(resp.data['langs'], list(mock_languages))
+
+        self.audio_service.tts = real_tts
 
 
 if __name__ == '__main__':

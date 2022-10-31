@@ -1,10 +1,9 @@
-mycroft-messagebus-client~=0.9,>0.9.3
-ovos_utils~=0.0,>=0.0.23
+ovos-core[audio]==0.0.5a35
+mycroft-messagebus-client~=0.10
+ovos_utils~=0.0,>=0.0.26
 ovos-config~=0.0,>=0.0.3
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0.4
-neon-utils[network]~=1.0
-
+neon-utils[network]~=1.1
 click~=8.0
 click-default-group~=1.2
-ovos-core[audio]~=0.0.4
