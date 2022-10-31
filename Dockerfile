@@ -22,6 +22,7 @@ RUN apt-get update && \
     libasound2-plugins \
     pulseaudio-utils \
     sox \
+    libsox-fmt-mp3 \
     vlc \
     ffmpeg \
     mimic \
