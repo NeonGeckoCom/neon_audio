@@ -238,7 +238,7 @@ class WrappedTTS(TTS):
                     responses[lang]["audio"][request["gender"]] = \
                         encode_file_to_base64_string(wav_file)
             else:
-                LOG.warning(f"No audio generated for text: {tx_sentence}")
+                raise RuntimeError(f"No audio generated for request: {request}")
         return responses
 
     @resolve_message
