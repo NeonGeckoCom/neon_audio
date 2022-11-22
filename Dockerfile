@@ -31,6 +31,7 @@ RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key
     echo "deb https://forslund.github.io/mycroft-desktop-repo bionic main" \
     > /etc/apt/sources.list.d/mycroft-mimic.list
 
+# TODO: This is a patch, not a fix; if gpg keys are not updated, build mimic from source
 RUN apt update -o Acquire::AllowInsecureRepositories=true
 RUN apt -o Acquire::AllowInsecureRepositories=true install -y --allow-unauthenticated \
     mimic
