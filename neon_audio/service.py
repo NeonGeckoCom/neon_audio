@@ -95,22 +95,6 @@ class NeonPlaybackService(PlaybackService):
                   f'fallback={self._fallback_tts_hash}')
         self.setDaemon(daemonic)
 
-    def _get_tts_fallback(self):
-        """Lazily initializes the fallback TTS if needed."""
-        if not self.fallback_tts:
-            from ovos_config.config import Configuration
-            config = Configuration()
-            engine = config.get('tts', {}).get("fallback_module", "mimic")
-            cfg = {"module": engine,
-                   engine: config.get('tts', {}).get(engine, {})}
-            LOG.debug(f'cfg={cfg}')
-            self.fallback_tts = TTSFactory.create(cfg)
-            self.fallback_tts.validator.validate()
-            self.fallback_tts.init(self.bus)
-            LOG.debug(f'fallback_tts.name={self.fallback_tts.tts_name}')
-        LOG.debug(f'Returning fallback_tts: {self.fallback_tts}')
-        return self.fallback_tts
-
     def handle_speak(self, message):
         message.context.setdefault('destination', [])
         if isinstance(message.context['destination'], str):
