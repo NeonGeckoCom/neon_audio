@@ -5,6 +5,17 @@ LABEL vendor=neon.ai \
 
 ENV NEON_CONFIG_PATH /config
 
+RUN  apt-get update && \
+     apt-get install -y \
+     curl \
+     gpg
+
+RUN  curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key | \
+     gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/mycroft-desktop.gpg --import - && \
+     chmod a+r /etc/apt/trusted.gpg.d/mycroft-desktop.gpg && \
+     echo "deb http://forslund.github.io/mycroft-desktop-repo bionic main" \
+     > /etc/apt/sources.list.d/mycroft-mimic.list
+
 RUN apt-get update && \
     apt-get install -y \
     alsa-utils \
@@ -14,27 +25,12 @@ RUN apt-get update && \
     libsox-fmt-mp3 \
     vlc \
     ffmpeg \
+    mimic \
     gcc \
     g++ \
     libsndfile1 \
     espeak-ng \
     git  # Added to handle installing plugins from git
-
-RUN apt-get update && \
-    apt-get install -y \
-    curl \
-    gpg
-
-RUN curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.key | \
-    gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/mycroft-desktop.gpg --import - && \
-    chmod a+r /etc/apt/trusted.gpg.d/mycroft-desktop.gpg && \
-    echo "deb https://forslund.github.io/mycroft-desktop-repo bionic main" \
-    > /etc/apt/sources.list.d/mycroft-mimic.list
-
-# TODO: This is a patch, not a fix; if gpg keys are not updated, build mimic from source
-RUN apt update -o Acquire::AllowInsecureRepositories=true
-RUN apt -o Acquire::AllowInsecureRepositories=true install -y --allow-unauthenticated \
-    mimic
 
 ADD . /neon_audio
 WORKDIR /neon_audio
