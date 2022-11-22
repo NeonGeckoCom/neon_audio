@@ -91,6 +91,8 @@ class NeonPlaybackService(PlaybackService):
 
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus)
+        LOG.debug(f'Initialized tts={self._tts_hash} | '
+                  f'fallback={self._fallback_tts_hash}')
         self.setDaemon(daemonic)
 
     def handle_speak(self, message):
