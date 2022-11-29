@@ -94,6 +94,7 @@ class NeonPlaybackService(PlaybackService):
                                  alive_hook, started_hook, watchdog, bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
+        create_signal("neon_speak_api")   # Create signal so skills use API
         self._playback_timeout = 120
         self.setDaemon(daemonic)
 
