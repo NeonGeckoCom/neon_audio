@@ -25,6 +25,7 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from threading import Event
 
 import mycroft.audio.tts
 import ovos_plugin_manager.templates.tts
@@ -93,6 +94,8 @@ class NeonPlaybackService(PlaybackService):
                                  alive_hook, started_hook, watchdog, bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
+        create_signal("neon_speak_api")   # Create signal so skills use API
+        self._playback_timeout = 120
         self.setDaemon(daemonic)
 
     def handle_speak(self, message):
@@ -102,7 +105,20 @@ class NeonPlaybackService(PlaybackService):
         if "audio" not in message.context['destination']:
             LOG.warning("Adding audio to destination context")
             message.context['destination'].append('audio')
+
+        audio_finished = Event()
+
+        ident = message.data.get('speak_ident') or message.context.get('ident')
+
+        def handle_finished(_):
+            audio_finished.set()
+        self.bus.once(ident, handle_finished)
+
         PlaybackService.handle_speak(self, message)
+        if not audio_finished.wait(self._playback_timeout):
+            LOG.warning(f"Playback not completed for {ident} within "
+                        f"{self._playback_timeout}")
+        LOG.info("Playback completed")
 
     def handle_get_tts(self, message):
         """

@@ -35,7 +35,9 @@ from json_database import JsonStorageXDG
 from mycroft_bus_client.message import Message
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
-from ovos_plugin_manager.templates.tts import TTS
+from ovos_plugin_manager.templates.tts import TTS, PlaybackThread
+from ovos_utils.enclosure.api import EnclosureAPI
+
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
 from neon_utils.signal_utils import create_signal
@@ -127,12 +129,24 @@ def get_requested_tts_languages(msg) -> list:
     return tts_reqs
 
 
+class NeonPlaybackThread(PlaybackThread):
+    def __init__(self, queue):
+        PlaybackThread.__init__(self, queue)
+
+    def _play(self):
+        ident = self._now_playing[3]
+        super()._play()
+        LOG.info(f"Played {ident}")
+        self.bus.emit(Message(ident))
+
+
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
         base_engine._get_tts = cls._get_tts
+        base_engine._init_playback = cls._init_playback
         return cls._init_neon(base_engine, *args, **kwargs)
 
     @staticmethod
@@ -165,6 +179,18 @@ class WrappedTTS(TTS):
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
         return base_engine
+
+    def _init_playback(self):
+        # shutdown any previous thread
+        if TTS.playback:
+            TTS.playback.shutdown()
+
+        TTS.playback = NeonPlaybackThread(TTS.queue)
+        TTS.playback.set_bus(self.bus)
+        TTS.playback.attach_tts(self)
+        if not TTS.playback.enclosure:
+            TTS.playback.enclosure = EnclosureAPI(self.bus)
+        TTS.playback.start()
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
         if any([x in inspect.signature(self.get_tts).parameters
@@ -267,6 +293,8 @@ class WrappedTTS(TTS):
             responses = self.get_multiple_tts(message, **kwargs)
             LOG.debug(f"responses={responses}")
 
+            ident = message.data.get('speak_ident') or ident
+
             # TODO dedicated klat handler/plugin
             if "klat_data" in message.context:
                 LOG.info("Sending klat.response")
@@ -274,6 +302,7 @@ class WrappedTTS(TTS):
                     message.forward("klat.response",
                                     {"responses": responses,
                                      "speaker": message.data.get("speaker")}))
+                self.bus.emit(Message(ident))
             else:
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
@@ -288,5 +317,6 @@ class WrappedTTS(TTS):
                                         listen))
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
+            LOG.warning(f'no Message associated with TTS request: {ident}')
             assert isinstance(self, TTS)
             TTS.execute(self, sentence, ident, listen, **kwargs)
