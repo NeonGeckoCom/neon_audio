@@ -109,16 +109,22 @@ class NeonPlaybackService(PlaybackService):
         audio_finished = Event()
 
         ident = message.data.get('speak_ident') or message.context.get('ident')
+        if not ident:
+            LOG.warning(f"Ident missing for speak: {message.data}")
 
         def handle_finished(_):
             audio_finished.set()
-        self.bus.once(ident, handle_finished)
+        if ident:
+            self.bus.once(ident, handle_finished)
+        else:
+            audio_finished.set()
 
         PlaybackService.handle_speak(self, message)
         if not audio_finished.wait(self._playback_timeout):
             LOG.warning(f"Playback not completed for {ident} within "
-                        f"{self._playback_timeout}")
-        LOG.info("Playback completed")
+                        f"{self._playback_timeout} seconds")
+        elif ident:
+            LOG.debug(f"Playback completed for: {ident}")
 
     def handle_get_tts(self, message):
         """
