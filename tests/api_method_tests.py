@@ -26,18 +26,18 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from time import time
-
 import os
 import sys
 import unittest
 
+from threading import Event
+from time import time
 from mock.mock import Mock
-from mycroft_bus_client import MessageBusClient, Message
+from mycroft_bus_client import Message
+from ovos_utils.messagebus import FakeBus
 from neon_utils.configuration_utils import init_config_dir
-from neon_messagebus.service import NeonBusService
-
 from ovos_config.config import Configuration
+from neon_utils.message_utils import dig_for_message
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.service import NeonPlaybackService
@@ -58,15 +58,18 @@ class TestAPIMethods(unittest.TestCase):
             {"host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
         assert test_config["tts"]["module"] == "neon-tts-plugin-larynx-server"
 
-        cls.messagebus = NeonBusService(debug=True, daemonic=True)
-        cls.messagebus.start()
+        # cls.messagebus = NeonBusService(debug=True, daemonic=True)
+        # cls.messagebus.start()
+        cls.bus = FakeBus()
+        cls.bus.connected_event = Event()
+        cls.bus.connected_event.set()
         cls.audio_service = NeonPlaybackService(audio_config=test_config,
-                                                daemonic=True)
+                                                daemonic=True, bus=cls.bus)
         cls.audio_service.start()
-        cls.bus = MessageBusClient()
-        cls.bus.run_in_thread()
-        if not cls.bus.connected_event.wait(30):
-            raise TimeoutError("Bus not connected after 60 seconds")
+        # cls.bus = MessageBusClient()
+        # cls.bus.run_in_thread()
+        # if not cls.bus.connected_event.wait(30):
+        #     raise TimeoutError("Bus not connected after 60 seconds")
         alive = False
         timeout = time() + 120
         while not alive and time() < timeout:
@@ -79,10 +82,10 @@ class TestAPIMethods(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
-        try:
-            cls.messagebus.shutdown()
-        except Exception as e:
-            print(e)
+        # try:
+        #     cls.messagebus.shutdown()
+        # except Exception as e:
+        #     print(e)
         try:
             cls.audio_service.shutdown()
         except Exception as e:
@@ -128,10 +131,12 @@ class TestAPIMethods(unittest.TestCase):
         pass
 
     def test_handle_speak(self):
+        self.audio_service._playback_timeout = 1  # Override playback timeout
         real_method = self.audio_service.execute_tts
         mock_tts = Mock()
         self.audio_service.execute_tts = mock_tts
 
+        # TODO: this destination handling should be deprecated
         # 'audio' not in destination
         message_invalid_destination = Message("speak",
                                               {"utterance": "test"},
@@ -157,12 +162,61 @@ class TestAPIMethods(unittest.TestCase):
         self.audio_service.handle_speak(message_valid_destination)
         mock_tts.assert_called_with("test5", "test6", False)
 
+        # TODO: this destination handling should be deprecated
         # no destination context
         message_no_destination = Message("speak",
                                          {"utterance": "test3"},
                                          {"ident": "test4"})
         self.audio_service.handle_speak(message_no_destination)
         mock_tts.assert_called_with("test3", "test4", False)
+
+        # Setup bus API handling
+        self.audio_service._playback_timeout = 60
+        msg: Message = None
+
+        def handle_tts(*args, **kwargs):
+            nonlocal msg
+            msg = dig_for_message()
+            ident = msg.data.get('speak_ident') or msg.data.get('ident')
+            if ident:
+                self.bus.emit(Message(ident))
+
+        mock_tts.side_effect = handle_tts
+
+        # Test No ident handling
+        message_no_ident = Message("speak",
+                                   {"utterance": "No Ident"},
+                                   {"destination": ["audio"]})
+        start_time = time()
+        self.audio_service.handle_speak(message_no_ident)
+        self.assertAlmostEqual(time(), start_time, 0)
+        self.assertEqual(msg, message_no_ident)
+
+        # Test `ident`
+        ident = time()
+        message_with_ident = Message("speak",
+                                     {"utterance": "with ident",
+                                      "ident": ident},
+                                     {"destination": ["audio"]})
+        on_ident = Mock()
+        self.bus.on(ident, on_ident)
+        self.audio_service.handle_speak(message_with_ident)
+        self.assertEqual(msg, message_with_ident)
+        on_ident.assert_called_once()
+
+        # Test `speak_ident`
+        speak_ident = time()
+        message_with_speak_ident = Message("speak",
+                                           {"utterance": "with speak ident",
+                                            "ident": ident,
+                                            "speak_ident": speak_ident},
+                                           {"destination": ["audio"]})
+        on_speak_ident = Mock()
+        self.bus.on(speak_ident, on_speak_ident)
+        self.audio_service.handle_speak(message_with_speak_ident)
+        self.assertEqual(msg, message_with_speak_ident)
+        on_ident.assert_called_once()
+        on_speak_ident.assert_called_once()
 
         self.audio_service.execute_tts = real_method
 
