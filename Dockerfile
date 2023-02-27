@@ -36,8 +36,7 @@ ADD . /neon_audio
 WORKDIR /neon_audio
 
 RUN pip install wheel && \
-    pip install torch --extra-index-url https://download.pytorch.org/whl/cpu && \
-    pip install .[docker]
+    pip install .[docker] --extra-index-url https://download.pytorch.org/whl/cpu
 
 COPY docker_overlay/ /
 RUN chmod ugo+x /root/run.sh
