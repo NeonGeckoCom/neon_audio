@@ -12,3 +12,6 @@ ovos-plugin-common-play~=0.0.4,>=0.0.5a5
 ovos-ocp-rss-plugin~=0.0.2
 ovos-ocp-m3u-plugin~=0.0.1
 ovos-ocp-news-plugin~=0.0.3
+
+# TODO: below patching ovos-bus-client refactor bug
+ovos-bus-client>=0.0.3a10
