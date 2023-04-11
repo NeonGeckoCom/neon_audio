@@ -1,7 +1,7 @@
 ovos-core~=0.0.6
 mycroft-messagebus-client~=0.10
 # ovos_utils~=0.0.30,>=0.0.31a10
-ovos_utils @ git+https://github.com/neondaniel/ovos-utils@FEAT_RemoveConfigurationReferences
+ovos_utils @ git+https://github.com/neondaniel/ovos_utils@FEAT_RemoveConfigurationReferences
 ovos-config~=0.0.7
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0.22
