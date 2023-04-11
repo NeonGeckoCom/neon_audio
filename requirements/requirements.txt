@@ -1,4 +1,4 @@
-ovos-core~=0.0.6
+ovos-core~=0.0.6,>=0.0.8a2
 mycroft-messagebus-client~=0.10
 ovos_utils~=0.0.30
 ovos-config~=0.0.7
