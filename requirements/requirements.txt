@@ -1,14 +1,14 @@
-ovos-core[audio]~=0.0.6
+ovos-core~=0.0.6
 mycroft-messagebus-client~=0.10
-ovos_utils~=0.0.27
-ovos-config~=0.0.5
+ovos_utils~=0.0.32
+ovos-config~=0.0.7
 phoneme-guesser~=0.1
-ovos-plugin-manager~=0.0.21
-neon-utils[network]~=1.2,>=1.2.4
+ovos-plugin-manager~=0.0.22
+neon-utils[network]~=1.4
 click~=8.0
 click-default-group~=1.2
 
-ovos-plugin-common-play~=0.0.4
+ovos-plugin-common-play~=0.0.5
 ovos-ocp-rss-plugin~=0.0.2
 ovos-ocp-m3u-plugin~=0.0.1
 ovos-ocp-news-plugin~=0.0.3
