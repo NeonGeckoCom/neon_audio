@@ -43,6 +43,9 @@ def main(*args, **kwargs):
         kwargs["audio_config"] = kwargs.pop("config")
 
     init_config_dir()
+    init_log(log_name="audio")
+
+    # TODO: Move tracemalloc init to utils
     from ovos_config.config import Configuration
     debug = False
     if Configuration().get('debug'):
@@ -50,7 +53,6 @@ def main(*args, **kwargs):
         LOG.info(f"Debug enabled; starting tracemalloc")
         tracemalloc.start()
 
-    init_log(log_name="audio")
     bus = get_messagebus()
     kwargs["bus"] = bus
     from neon_utils.signal_utils import init_signal_bus, \
@@ -68,6 +70,7 @@ def main(*args, **kwargs):
     service.start()
     wait_for_exit_signal()
     if debug:
+        LOG.debug(f"Generating malloc snapshot")
         memory_snapshot = tracemalloc.take_snapshot()
         display_top(memory_snapshot)
     service.shutdown()
