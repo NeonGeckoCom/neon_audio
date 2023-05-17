@@ -26,11 +26,10 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import tracemalloc
-
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import init_config_dir
 from neon_utils.log_utils import init_log
+from neon_utils.process_utils import start_malloc, snapshot_malloc, print_malloc
 from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
@@ -44,15 +43,7 @@ def main(*args, **kwargs):
 
     init_config_dir()
     init_log(log_name="audio")
-
-    # TODO: Move tracemalloc init to utils
-    from ovos_config.config import Configuration
-    debug = False
-    if Configuration().get('debug'):
-        debug = True
-        LOG.info(f"Debug enabled; starting tracemalloc")
-        tracemalloc.start()
-
+    malloc_running = start_malloc()
     bus = get_messagebus()
     kwargs["bus"] = bus
     from neon_utils.signal_utils import init_signal_bus, \
@@ -69,39 +60,13 @@ def main(*args, **kwargs):
     service = NeonPlaybackService(*args, **kwargs)
     service.start()
     wait_for_exit_signal()
-    if debug:
+    if malloc_running:
         LOG.debug(f"Generating malloc snapshot")
-        memory_snapshot = tracemalloc.take_snapshot()
-        display_top(memory_snapshot)
+        try:
+            print_malloc(snapshot_malloc())
+        except Exception as e:
+            LOG.error(e)
     service.shutdown()
-
-
-# TODO: Move to utils
-def display_top(snapshot, key_type='lineno', limit=10, trace_limit=2):
-    import linecache
-    snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
-        tracemalloc.Filter(False, "<unknown>"),
-    ))
-    top_stats = snapshot.statistics(key_type)
-
-    LOG.info(f"Top {limit} lines")
-    for index, stat in enumerate(top_stats[:limit], 1):
-        frame = stat.traceback[0]
-        LOG.info(f"#{index}: {frame.filename}:{frame.lineno}: "
-                 f"{stat.size / 1048576} MiB")
-        for frame in stat.traceback[0:trace_limit]:
-            line = linecache.getline(frame.filename, frame.lineno).strip()
-            if line:
-                LOG.info(f'    {line}')
-
-    other = top_stats[limit:]
-    if other:
-        size = sum(stat.size for stat in other)
-        LOG.info(f"{len(other)} other:{size / 1048576} MiB")
-    total = sum(stat.size for stat in top_stats)
-    LOG.info(f"Total allocated size: {total / 1048576} MiB")
 
 
 if __name__ == '__main__':
