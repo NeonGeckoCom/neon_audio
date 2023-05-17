@@ -26,6 +26,8 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import tracemalloc
+
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import init_config_dir
 from neon_utils.log_utils import init_log
@@ -41,6 +43,13 @@ def main(*args, **kwargs):
         kwargs["audio_config"] = kwargs.pop("config")
 
     init_config_dir()
+    from ovos_config.config import Configuration
+    debug = False
+    if Configuration().get('debug'):
+        debug = True
+        LOG.info(f"Debug enabled; starting tracemalloc")
+        tracemalloc.start()
+
     init_log(log_name="audio")
     bus = get_messagebus()
     kwargs["bus"] = bus
@@ -58,7 +67,36 @@ def main(*args, **kwargs):
     service = NeonPlaybackService(*args, **kwargs)
     service.start()
     wait_for_exit_signal()
+    if debug:
+        memory_snapshot = tracemalloc.take_snapshot()
+        display_top(memory_snapshot)
     service.shutdown()
+
+
+# TODO: Move to utils
+def display_top(snapshot, key_type='lineno', limit=10):
+    import linecache
+    snapshot = snapshot.filter_traces((
+        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+        tracemalloc.Filter(False, "<unknown>"),
+    ))
+    top_stats = snapshot.statistics(key_type)
+
+    LOG.info(f"Top {limit} lines")
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        LOG.info(f"#{index}: {frame.filename}:{frame.lineno}: "
+                 f"{stat.size / 1024} KiB")
+        line = linecache.getline(frame.filename, frame.lineno).strip()
+        if line:
+            LOG.info(f'    {line}')
+
+    other = top_stats[limit:]
+    if other:
+        size = sum(stat.size for stat in other)
+        LOG.info("%s other: %.1f KiB" % (len(other), size / 1024))
+    total = sum(stat.size for stat in top_stats)
+    LOG.info("Total allocated size: %.1f KiB" % (total / 1024))
 
 
 if __name__ == '__main__':
