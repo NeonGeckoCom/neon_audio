@@ -29,6 +29,7 @@
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import init_config_dir
 from neon_utils.log_utils import init_log
+from neon_utils.process_utils import start_malloc, snapshot_malloc, print_malloc
 from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
@@ -42,6 +43,7 @@ def main(*args, **kwargs):
 
     init_config_dir()
     init_log(log_name="audio")
+    malloc_running = start_malloc(stack_depth=4)
     bus = get_messagebus()
     kwargs["bus"] = bus
     from neon_utils.signal_utils import init_signal_bus, \
@@ -58,6 +60,11 @@ def main(*args, **kwargs):
     service = NeonPlaybackService(*args, **kwargs)
     service.start()
     wait_for_exit_signal()
+    if malloc_running:
+        try:
+            print_malloc(snapshot_malloc())
+        except Exception as e:
+            LOG.error(e)
     service.shutdown()
 
 
