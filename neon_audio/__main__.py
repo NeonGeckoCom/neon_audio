@@ -43,7 +43,7 @@ def main(*args, **kwargs):
 
     init_config_dir()
     init_log(log_name="audio")
-    malloc_running = start_malloc()
+    malloc_running = start_malloc(stack_depth=4)
     bus = get_messagebus()
     kwargs["bus"] = bus
     from neon_utils.signal_utils import init_signal_bus, \
@@ -61,7 +61,6 @@ def main(*args, **kwargs):
     service.start()
     wait_for_exit_signal()
     if malloc_running:
-        LOG.debug(f"Generating malloc snapshot")
         try:
             print_malloc(snapshot_malloc())
         except Exception as e:
