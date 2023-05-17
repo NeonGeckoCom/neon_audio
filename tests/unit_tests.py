@@ -35,7 +35,7 @@ from time import time
 from os.path import join, dirname
 from threading import Event
 from mock import Mock
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
