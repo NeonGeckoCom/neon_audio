@@ -33,7 +33,7 @@ import unittest
 from threading import Event
 from time import time
 from mock.mock import Mock
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 from ovos_utils.messagebus import FakeBus
 from neon_utils.configuration_utils import init_config_dir
 from ovos_config.config import Configuration

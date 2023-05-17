@@ -25,18 +25,17 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from threading import Event
 
-import mycroft.audio.tts
+import ovos_audio.tts
 import ovos_plugin_manager.templates.tts
 
+from threading import Event
 from ovos_utils.log import LOG
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
 
-mycroft.audio.tts.TTSFactory = TTSFactory
-
-from mycroft.audio.service import PlaybackService
+ovos_audio.tts.TTSFactory = TTSFactory
+from ovos_audio.service import PlaybackService
 
 
 def on_ready():
@@ -86,7 +85,7 @@ class NeonPlaybackService(PlaybackService):
         init_signal_bus(bus)
         init_signal_handlers()
         from neon_utils.signal_utils import create_signal, check_for_signal
-        mycroft.audio.service.check_for_signal = check_for_signal
+        ovos_audio.service.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.create_signal = create_signal
 
@@ -96,7 +95,7 @@ class NeonPlaybackService(PlaybackService):
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API
         self._playback_timeout = 120
-        self.setDaemon(daemonic)
+        self.daemon = daemonic
 
     def handle_speak(self, message):
         message.context.setdefault('destination', [])
