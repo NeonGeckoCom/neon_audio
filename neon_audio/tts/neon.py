@@ -32,7 +32,7 @@ import os
 
 from os.path import dirname
 from json_database import JsonStorageXDG
-from mycroft_bus_client.message import Message
+from ovos_bus_client.message import Message
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
 from ovos_plugin_manager.templates.tts import TTS, PlaybackThread

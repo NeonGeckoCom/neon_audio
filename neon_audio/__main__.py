@@ -29,10 +29,10 @@
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.configuration_utils import init_config_dir
 from neon_utils.log_utils import init_log
+from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
-
-from mycroft.lock import Lock
+from ovos_utils.process_utils import reset_sigint_handler, PIDLock as Lock
 
 
 def main(*args, **kwargs):
@@ -50,7 +50,6 @@ def main(*args, **kwargs):
     init_signal_handlers()
 
     from neon_audio.service import NeonPlaybackService
-    from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 
     reset_sigint_handler()
     check_for_signal("isSpeaking")
