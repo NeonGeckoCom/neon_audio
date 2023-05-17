@@ -74,10 +74,11 @@ def main(*args, **kwargs):
 
 
 # TODO: Move to utils
-def display_top(snapshot, key_type='lineno', limit=10):
+def display_top(snapshot, key_type='lineno', limit=10, trace_limit=2):
     import linecache
     snapshot = snapshot.filter_traces((
         tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+        tracemalloc.Filter(False, "<frozen importlib._bootstrap_external>"),
         tracemalloc.Filter(False, "<unknown>"),
     ))
     top_stats = snapshot.statistics(key_type)
@@ -86,17 +87,18 @@ def display_top(snapshot, key_type='lineno', limit=10):
     for index, stat in enumerate(top_stats[:limit], 1):
         frame = stat.traceback[0]
         LOG.info(f"#{index}: {frame.filename}:{frame.lineno}: "
-                 f"{stat.size / 1024} KiB")
-        line = linecache.getline(frame.filename, frame.lineno).strip()
-        if line:
-            LOG.info(f'    {line}')
+                 f"{stat.size / 1048576} MiB")
+        for frame in stat.traceback[0:trace_limit]:
+            line = linecache.getline(frame.filename, frame.lineno).strip()
+            if line:
+                LOG.info(f'    {line}')
 
     other = top_stats[limit:]
     if other:
         size = sum(stat.size for stat in other)
-        LOG.info("%s other: %.1f KiB" % (len(other), size / 1024))
+        LOG.info(f"{len(other)} other:{size / 1048576} MiB")
     total = sum(stat.size for stat in top_stats)
-    LOG.info("Total allocated size: %.1f KiB" % (total / 1024))
+    LOG.info(f"Total allocated size: {total / 1048576} MiB")
 
 
 if __name__ == '__main__':
