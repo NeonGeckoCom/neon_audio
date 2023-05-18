@@ -1,4 +1,4 @@
-ovos-audio~=0.0.1,>=0.0.2a11
+ovos-audio~=0.0.1,>=0.0.2a12
 ovos-utils~=0.0.32
 ovos-config~=0.0.7
 phoneme-guesser~=0.1

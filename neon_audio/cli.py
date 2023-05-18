@@ -30,6 +30,7 @@ import click
 
 from click_default_group import DefaultGroup
 from neon_utils.packaging_utils import get_package_version_spec
+from neon_utils.configuration_utils import init_config_dir
 from ovos_config.config import Configuration
 
 
@@ -53,6 +54,7 @@ def neon_audio_cli(version: bool = False):
 @click.option("--force-install", "-f", default=False, is_flag=True,
               help="Force pip installation of configured module")
 def run(module, package, force_install):
+    init_config_dir()
     from neon_audio.__main__ import main
     audio_config = Configuration()
     if force_install or module or package:
