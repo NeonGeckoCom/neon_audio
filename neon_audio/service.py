@@ -33,9 +33,10 @@ from threading import Event
 from ovos_utils.log import LOG
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
+from ovos_audio.service import PlaybackService
 
 ovos_audio.tts.TTSFactory = TTSFactory
-from ovos_audio.service import PlaybackService
+ovos_audio.service.TTSFactory = TTSFactory
 
 
 def on_ready():
