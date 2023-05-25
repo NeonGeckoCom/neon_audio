@@ -36,14 +36,14 @@ from ovos_config.config import Configuration
 
 @click.group("neon-audio", cls=DefaultGroup,
              no_args_is_help=True, invoke_without_command=True,
-             help="Neon Core Commands\n\n"
+             help="Neon Audio Commands\n\n"
                   "See also: neon COMMAND --help")
 @click.option("--version", "-v", is_flag=True, required=False,
               help="Print the current version")
 def neon_audio_cli(version: bool = False):
     if version:
-        click.echo(f"neon_speech version "
-                   f"{get_package_version_spec('neon_speech')}")
+        click.echo(f"neon_audio version "
+                   f"{get_package_version_spec('neon_audio')}")
 
 
 @neon_audio_cli.command(help="Start Neon Audio module")
