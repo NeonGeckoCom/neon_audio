@@ -34,7 +34,8 @@ import unittest
 from time import time
 from os.path import join, dirname
 from threading import Event
-from mock import Mock
+from unittest.mock import Mock, patch
+from click.testing import CliRunner
 from ovos_bus_client import Message
 from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
@@ -212,6 +213,18 @@ class TTSUtilTests(unittest.TestCase):
         self.assertTrue(config['new_key']['val'])
         shutil.rmtree(test_config_dir)
         os.environ.pop("XDG_CONFIG_HOME")
+
+
+class TestCLI(unittest.TestCase):
+    runner = CliRunner()
+
+    @patch("neon_audio.cli.init_config_dir")
+    @patch("neon_audio.__main__.main")
+    def test_run(self, main, init_config):
+        from neon_audio.cli import run
+        self.runner.invoke(run)
+        init_config.assert_called_once()
+        main.assert_called_once()
 
 
 if __name__ == '__main__':
