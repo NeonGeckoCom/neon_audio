@@ -219,7 +219,7 @@ class TestCLI(unittest.TestCase):
     runner = CliRunner()
 
     @patch("neon_audio.cli.init_config_dir")
-    @patch("neon_audio.service.__main__.main")
+    @patch("neon_audio.__main__.main")
     def test_run(self, main, init_config):
         from neon_audio.cli import run
         self.runner.invoke(run)
