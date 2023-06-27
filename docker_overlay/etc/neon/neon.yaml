@@ -27,3 +27,6 @@ MQ:
 signal:
   use_signal_files: false
   max_wait_seconds: 300
+language:
+  detection_module: libretranslate_detection_plug
+  translation_module: libretranslate_plug

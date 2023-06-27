@@ -48,7 +48,7 @@ def neon_audio_cli(version: bool = False):
 
 @neon_audio_cli.command(help="Start Neon Audio module")
 @click.option("--module", "-m", default=None,
-              help="STT Plugin to configure")
+              help="TTS Plugin to configure")
 @click.option("--package", "-p", default=None,
               help="TTS package spec to install")
 @click.option("--force-install", "-f", default=False, is_flag=True,
@@ -56,18 +56,18 @@ def neon_audio_cli(version: bool = False):
 def run(module, package, force_install):
     init_config_dir()
     from neon_audio.__main__ import main
-    audio_config = Configuration()
     if force_install or module or package:
         install_plugin(module, package, force_install)
-    if module and module != audio_config["tts"]["module"]:
-        click.echo("Updating runtime config with module and package")
-        package = package or audio_config["tts"].get("package_spec")
-        audio_config["tts"]["module"] = module
-        audio_config["tts"]["package_spec"] = package
-    click.echo(f'Loading TTS Module: {audio_config["tts"]["module"]}')
-    click.echo(f'TTS Config={audio_config["tts"]}')
+    if module:
+        audio_config = Configuration()
+        if module != audio_config["tts"]["module"]:
+            from neon_audio.utils import patch_config
+            click.echo("Updating config with module and package")
+            package = package or audio_config["tts"].get("package_spec")
+            patch_config({"tts": {"module": module,
+                                  "package_spec": package}})
     click.echo("Starting Audio Client")
-    main(audio_config=audio_config)
+    main()
     click.echo("Audio Client Shutdown")
 
 
