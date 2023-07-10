@@ -45,6 +45,10 @@ from neon_audio.utils import use_neon_audio
 
 
 class TestAPIMethods(unittest.TestCase):
+    bus = FakeBus()
+    bus.connected_event = Event()
+    bus.connected_event.set()
+
     @classmethod
     def setUpClass(cls) -> None:
         test_config_dir = os.path.join(os.path.dirname(__file__), "config")
@@ -53,7 +57,7 @@ class TestAPIMethods(unittest.TestCase):
         use_neon_audio(init_config_dir)()
 
         test_config = Configuration()
-        test_config["g2p"]["module"] = "dummy"
+        test_config["g2p"] = {"module": None}
         test_config["tts"]["module"] = "neon-tts-plugin-larynx-server"
         test_config["tts"]["neon-tts-plugin-larynx-server"] = \
             {"host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
@@ -61,32 +65,23 @@ class TestAPIMethods(unittest.TestCase):
 
         # cls.messagebus = NeonBusService(debug=True, daemonic=True)
         # cls.messagebus.start()
-        cls.bus = FakeBus()
-        cls.bus.connected_event = Event()
-        cls.bus.connected_event.set()
         cls.audio_service = NeonPlaybackService(audio_config=test_config,
                                                 daemonic=True, bus=cls.bus)
         cls.audio_service.start()
-        # cls.bus = MessageBusClient()
-        # cls.bus.run_in_thread()
-        # if not cls.bus.connected_event.wait(30):
-        #     raise TimeoutError("Bus not connected after 60 seconds")
+
         alive = False
         timeout = time() + 120
         while not alive and time() < timeout:
-            message = cls.bus.wait_for_response(Message("mycroft.audio.is_ready"))
+            message = cls.bus.wait_for_response(
+                Message("mycroft.audio.is_ready"))
             if message:
                 alive = message.data.get("status")
         if not alive:
-            raise TimeoutError("Speech module not ready after 120 seconds")
+            raise TimeoutError("Audio module not ready after 120 seconds")
 
     @classmethod
     def tearDownClass(cls) -> None:
         super(TestAPIMethods, cls).tearDownClass()
-        # try:
-        #     cls.messagebus.shutdown()
-        # except Exception as e:
-        #     print(e)
         try:
             cls.audio_service.shutdown()
         except Exception as e:
@@ -96,7 +91,9 @@ class TestAPIMethods(unittest.TestCase):
         context = {"client": "tester",
                    "ident": "123",
                    "user": "TestRunner"}
-        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {}, context), context["ident"])
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {},
+                                                      context),
+                                              context["ident"])
         self.assertEqual(tts_resp.context, context)
         self.assertIsInstance(tts_resp.data.get("error"), str)
         self.assertEqual(tts_resp.data["error"], "No text provided.")
@@ -105,10 +102,12 @@ class TestAPIMethods(unittest.TestCase):
         context = {"client": "tester",
                    "ident": "1234",
                    "user": "TestRunner"}
-        tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {"text": 123}, context),
+        tts_resp = self.bus.wait_for_response(Message("neon.get_tts",
+                                                      {"text": 123}, context),
                                               context["ident"], timeout=60)
         self.assertEqual(tts_resp.context, context)
-        self.assertTrue(tts_resp.data.get("error").startswith("text is not a str:"))
+        self.assertTrue(tts_resp.data.get("error")
+                        .startswith("text is not a str:"))
 
     def test_get_tts_valid_default(self):
         text = "This is a test"
