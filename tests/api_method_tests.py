@@ -53,6 +53,7 @@ class TestAPIMethods(unittest.TestCase):
         use_neon_audio(init_config_dir)()
 
         test_config = Configuration()
+        test_config["g2p"]["module"] = "dummy"
         test_config["tts"]["module"] = "neon-tts-plugin-larynx-server"
         test_config["tts"]["neon-tts-plugin-larynx-server"] = \
             {"host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
