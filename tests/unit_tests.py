@@ -166,7 +166,9 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertTrue(self.tts.validator.validate_dependencies())
         self.assertTrue(self.tts.validator.validate_connection())
 
-    def test_validator_invalid(self):
+    @patch("ovos_plugin_manager.templates.tts.Configuration")
+    def test_validator_invalid(self, config):
+        config.return_value = self.config  # Explicitly no g2p
         tts = DummyTTS("es", {})
 
         with self.assertRaises(Exception):
