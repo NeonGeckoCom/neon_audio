@@ -56,7 +56,9 @@ class TTSBaseClassTests(unittest.TestCase):
     test_conf_dir = join(dirname(__file__), "config")
 
     @classmethod
-    def setUpClass(cls) -> None:
+    @patch("ovos_plugin_manager.templates.tts.Configuration")
+    def setUpClass(cls, config) -> None:
+        config.return_value = cls.config  # Explicitly no g2p
         os.makedirs(cls.test_conf_dir, exist_ok=True)
         os.environ["XDG_CACHE_HOME"] = cls.test_cache_dir
 
