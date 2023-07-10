@@ -51,12 +51,12 @@ from test_objects import DummyTTS, DummyTTSValidator
 
 class TTSBaseClassTests(unittest.TestCase):
     lang = "en-us"
-    config = {"g2p": {"module": "dummy"}}
+    config = {"key": "val"}
+    test_cache_dir = join(dirname(__file__), "test_cache")
+    test_conf_dir = join(dirname(__file__), "config")
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.test_cache_dir = join(dirname(__file__), "test_cache")
-        cls.test_conf_dir = join(dirname(__file__), "config")
         os.makedirs(cls.test_conf_dir, exist_ok=True)
         os.environ["XDG_CACHE_HOME"] = cls.test_cache_dir
 
