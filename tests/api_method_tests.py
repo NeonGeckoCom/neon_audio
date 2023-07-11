@@ -30,41 +30,39 @@ import os
 import sys
 import unittest
 
+from unittest.mock import Mock, patch
 from threading import Event
 from time import time
-from mock.mock import Mock
 from ovos_bus_client import Message
 from ovos_utils.messagebus import FakeBus
-from neon_utils.configuration_utils import init_config_dir
-from ovos_config.config import Configuration
 from neon_utils.message_utils import dig_for_message
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.service import NeonPlaybackService
-from neon_audio.utils import use_neon_audio
+
+
+_TEST_CONFIG = {
+    "g2p": {"module": "dummy"},
+    "Audio": {},
+    "tts": {"module": "neon-tts-plugin-larynx-server",
+            "neon-tts-plugin-larynx-server": {
+                "host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}}
+}
 
 
 class TestAPIMethods(unittest.TestCase):
     bus = FakeBus()
     bus.connected_event = Event()
     bus.connected_event.set()
+    test_config_dir = os.path.join(os.path.dirname(__file__), "config")
+    os.environ["XDG_CONFIG_HOME"] = test_config_dir
 
     @classmethod
-    def setUpClass(cls) -> None:
-        test_config_dir = os.path.join(os.path.dirname(__file__), "config")
-        os.makedirs(test_config_dir, exist_ok=True)
-        os.environ["XDG_CONFIG_HOME"] = test_config_dir
-        use_neon_audio(init_config_dir)()
-
-        test_config = Configuration()
-        test_config["g2p"] = {"module": "dummy"}
-        test_config["tts"]["module"] = "neon-tts-plugin-larynx-server"
-        test_config["tts"]["neon-tts-plugin-larynx-server"] = \
-            {"host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}
-        assert test_config["tts"]["module"] == "neon-tts-plugin-larynx-server"
-
-        cls.audio_service = NeonPlaybackService(audio_config=test_config,
-                                                daemonic=True, bus=cls.bus)
+    @patch("ovos_audio.service.Configuration")
+    def setUpClass(cls, config) -> None:
+        config.return_value = _TEST_CONFIG
+        cls.audio_service = NeonPlaybackService(daemonic=True, bus=cls.bus)
+        assert cls.audio_service.config == _TEST_CONFIG
         cls.audio_service.start()
 
         alive = False
@@ -170,7 +168,7 @@ class TestAPIMethods(unittest.TestCase):
 
         # Setup bus API handling
         self.audio_service._playback_timeout = 60
-        msg: Message = None
+        msg = None
 
         def handle_tts(*args, **kwargs):
             nonlocal msg
