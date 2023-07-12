@@ -45,8 +45,8 @@ _TEST_CONFIG = {
     "g2p": {"module": "dummy"},
     "Audio": {},
     "tts": {"module": "neon-tts-plugin-larynx-server",
-            "neon-tts-plugin-larynx-server": {
-                "host": os.environ.get("TTS_URL") or "https://larynx.2022.us/"}}
+            "neon-tts-plugin-larynx-server": {"host": "https://larynx.2022.us/"}
+            }
 }
 
 
@@ -77,7 +77,6 @@ class TestAPIMethods(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        super(TestAPIMethods, cls).tearDownClass()
         try:
             cls.audio_service.shutdown()
         except Exception as e:
