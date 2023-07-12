@@ -40,8 +40,6 @@ from ovos_bus_client import Message
 from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
-from neon_utils.signal_utils import check_for_signal
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from neon_audio.tts import WrappedTTS
 
@@ -54,6 +52,9 @@ class TTSBaseClassTests(unittest.TestCase):
     config = {"key": "val"}
     test_cache_dir = join(dirname(__file__), "test_cache")
     test_conf_dir = join(dirname(__file__), "config")
+    bus = FakeBus()
+    bus.connected_event = Event()
+    bus.connected_event.set()
 
     @classmethod
     @patch("ovos_plugin_manager.templates.tts.Configuration")
@@ -63,10 +64,7 @@ class TTSBaseClassTests(unittest.TestCase):
         os.environ["XDG_CACHE_HOME"] = cls.test_cache_dir
 
         cls.tts = WrappedTTS(DummyTTS, cls.lang, cls.config)
-        bus = FakeBus()
-        bus.connected_event = Event()
-        bus.connected_event.set()
-        cls.tts.init(bus)
+        cls.tts.init(cls.bus)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -123,6 +121,8 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertEqual(self.tts._preprocess_sentence(sentence), [sentence])
 
     def test_execute(self):
+        from neon_utils.signal_utils import check_for_signal, init_signal_bus
+        init_signal_bus(self.bus)
         sentence = "testing"
         ident = time()
         default_execute = self.tts._execute
