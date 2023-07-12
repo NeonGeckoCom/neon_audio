@@ -61,19 +61,17 @@ class TestAPIMethods(unittest.TestCase):
     @patch("ovos_audio.service.Configuration")
     def setUpClass(cls, config) -> None:
         config.return_value = _TEST_CONFIG
-        cls.audio_service = NeonPlaybackService(daemonic=True, bus=cls.bus)
+        ready_event = Event()
+
+        def on_ready():
+            ready_event.set()
+
+        cls.audio_service = NeonPlaybackService(daemonic=True, bus=cls.bus,
+                                                ready_hook=on_ready)
         assert cls.audio_service.config == _TEST_CONFIG
         cls.audio_service.start()
-
-        alive = False
-        timeout = time() + 120
-        while not alive and time() < timeout:
-            message = cls.bus.wait_for_response(
-                Message("mycroft.audio.is_ready"))
-            if message:
-                alive = message.data.get("status")
-        if not alive:
-            raise TimeoutError("Audio module not ready after 120 seconds")
+        if not ready_event.wait(30):
+            raise TimeoutError("Audio service not ready")
 
     @classmethod
     def tearDownClass(cls) -> None:
