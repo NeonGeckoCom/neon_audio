@@ -40,7 +40,8 @@ from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
-from neon_utils.signal_utils import create_signal, check_for_signal
+from neon_utils.signal_utils import create_signal, check_for_signal,\
+    init_signal_bus
 from ovos_utils.log import LOG
 
 from ovos_config.config import Configuration
@@ -132,6 +133,7 @@ def get_requested_tts_languages(msg) -> list:
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue):
         PlaybackThread.__init__(self, queue)
+        init_signal_bus(self.bus)
 
     def begin_audio(self, message=None):
         # TODO: Mark signals for deprecation
