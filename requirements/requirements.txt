@@ -1,11 +1,10 @@
 ovos-audio~=0.0.1,>=0.0.2a12,<0.0.2a14
 # TODO: ovos-audio 0.0.2a14 introduces a breaking change around `ident` handling
-ovos-utils~=0.0.32
+ovos-utils~=0.0.34
 ovos-config~=0.0.7
 phoneme-guesser~=0.1
-# TODO: OPM 0.0.24a1 introduces breaking changes around signals
-ovos-plugin-manager~=0.0.22,<=0.0.23
-neon-utils[network]~=1.4,>=1.5.1a7
+ovos-plugin-manager~=0.0.22,>=0.0.24a5
+neon-utils[network]~=1.6
 click~=8.0
 click-default-group~=1.2
 ovos-bus-client~=0.0.3
