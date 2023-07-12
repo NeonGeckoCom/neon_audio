@@ -40,7 +40,8 @@ from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
-from neon_utils.signal_utils import create_signal
+from neon_utils.signal_utils import create_signal, check_for_signal,\
+    init_signal_bus
 from ovos_utils.log import LOG
 
 from ovos_config.config import Configuration
@@ -133,8 +134,24 @@ class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue):
         PlaybackThread.__init__(self, queue)
 
+    def begin_audio(self, message=None):
+        # TODO: Mark signals for deprecation
+        check_for_signal("isSpeaking")
+        create_signal("isSpeaking")
+        PlaybackThread.begin_audio(self, message)
+
+    def end_audio(self, listen, message=None):
+        PlaybackThread.end_audio(self, listen, message)
+        # TODO: Mark signals for deprecation
+        check_for_signal("isSpeaking")
+
     def _play(self):
         ident = self._now_playing[3]
+        if not ident and len(self._now_playing) >= 5 and \
+                isinstance(self._now_playing[4], Message):
+            LOG.debug("Handling new style playback")
+            ident = self._now_playing[4].context.get('session',
+                                                     {}).get('session_id')
         super()._play()
         LOG.info(f"Played {ident}")
         self.bus.emit(Message(ident))
@@ -185,6 +202,7 @@ class WrappedTTS(TTS):
         if TTS.playback:
             TTS.playback.shutdown()
 
+        init_signal_bus(self.bus)
         TTS.playback = NeonPlaybackThread(TTS.queue)
         TTS.playback.set_bus(self.bus)
         TTS.playback.attach_tts(self)
@@ -319,4 +337,5 @@ class WrappedTTS(TTS):
         else:
             LOG.warning(f'no Message associated with TTS request: {ident}')
             assert isinstance(self, TTS)
+            create_signal("isSpeaking")
             TTS.execute(self, sentence, ident, listen, **kwargs)

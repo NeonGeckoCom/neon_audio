@@ -4,6 +4,8 @@ play_ogg_cmdline: "play %1"
 tts:
   module: coqui
   fallback_module: ovos-tts-plugin-mimic
+g2p:
+  module: dummy
 Audio:
   backends:
     OCP:
