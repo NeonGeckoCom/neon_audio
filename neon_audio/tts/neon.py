@@ -133,7 +133,6 @@ def get_requested_tts_languages(msg) -> list:
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue):
         PlaybackThread.__init__(self, queue)
-        init_signal_bus(self.bus)
 
     def begin_audio(self, message=None):
         # TODO: Mark signals for deprecation
@@ -203,6 +202,7 @@ class WrappedTTS(TTS):
         if TTS.playback:
             TTS.playback.shutdown()
 
+        init_signal_bus(self.bus)
         TTS.playback = NeonPlaybackThread(TTS.queue)
         TTS.playback.set_bus(self.bus)
         TTS.playback.attach_tts(self)
@@ -337,4 +337,5 @@ class WrappedTTS(TTS):
         else:
             LOG.warning(f'no Message associated with TTS request: {ident}')
             assert isinstance(self, TTS)
+            create_signal("isSpeaking")
             TTS.execute(self, sentence, ident, listen, **kwargs)
