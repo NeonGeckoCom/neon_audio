@@ -69,5 +69,12 @@ def main(*args, **kwargs):
     service.shutdown()
 
 
+def deprecated_entrypoint():
+    from ovos_utils.log import log_deprecation
+    log_deprecation("Use `neon-audio run` in place of "
+                    "`neon_audio_client`", "2.0.0")
+    main()
+
+
 if __name__ == '__main__':
     main()
