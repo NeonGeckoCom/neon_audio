@@ -63,12 +63,13 @@ def get_requested_tts_languages(msg) -> list:
         # If speaker data is present, use it
         if msg.data.get("speaker"):
             speaker = msg.data.get("speaker")
-            tts_reqs.append({"speaker": speaker["name"],
-                             "language": speaker["language"],
-                             "gender": speaker["gender"],
+            tts_reqs.append({"speaker": speaker.get("name", "Neon"),
+                             "language": speaker.get("language",
+                                                     msg.data.get("lang")),
+                             "gender": speaker.get("gender", default_gender),
                              "voice": speaker.get("voice")
                              })
-            LOG.debug(f">>> speaker={speaker}")
+            LOG.info(f">>> speaker={speaker}")
 
         # If multiple profiles attached to message, get TTS for all
         elif profiles:
@@ -245,19 +246,21 @@ class WrappedTTS(TTS):
         LOG.debug(f"tts_requested={tts_requested}")
         sentence = message.data["text"]
         sentence = self.validate_ssml(sentence)
+        skill_lang = message.data.get('lang') or self.lang
+        LOG.debug(f"utterance_lang={skill_lang}")
         responses = {}
         for request in tts_requested:
-            lang = kwargs["lang"] = request["language"]
+            tts_lang = kwargs["lang"] = request["language"]
             # Check if requested tts lang matches internal (text) lang
             # TODO: `self.lang` should come from the incoming message
-            if lang.split("-")[0] != self.lang.split("-")[0]:
-                self.cached_translations.setdefault(lang, {})
+            if tts_lang.split("-")[0] != skill_lang.split("-")[0]:
+                self.cached_translations.setdefault(tts_lang, {})
 
-                tx_sentence = self.cached_translations[lang].get(sentence)
+                tx_sentence = self.cached_translations[tts_lang].get(sentence)
                 if not tx_sentence:
-                    tx_sentence = self.translator.translate(sentence, lang,
-                                                            self.lang)
-                    self.cached_translations[lang][sentence] = tx_sentence
+                    tx_sentence = self.translator.translate(sentence, tts_lang,
+                                                            skill_lang)
+                    self.cached_translations[tts_lang][sentence] = tx_sentence
                     self.cached_translations.store()
                 LOG.info(f"Got translated sentence: {tx_sentence}")
             else:
@@ -265,22 +268,22 @@ class WrappedTTS(TTS):
             wav_file, phonemes = self._get_tts(tx_sentence, request, **kwargs)
 
             # If this is the first response, populate translation and phonemes
-            if not responses.get(lang):
-                responses[lang] = {"sentence": tx_sentence,
-                                   "translated": tx_sentence != sentence,
-                                   "phonemes": phonemes,
-                                   "genders": list()}
+            responses.setdefault(tts_lang, {"sentence": tx_sentence,
+                                            "translated": tx_sentence != sentence,
+                                            "phonemes": phonemes,
+                                            "genders": list()})
 
             # Append the generated audio from this request
             if os.path.isfile(wav_file):
-                responses[lang][request["gender"]] = wav_file
-                responses[lang]["genders"].append(request["gender"])
+                responses[tts_lang][request["gender"]] = wav_file
+                responses[tts_lang]["genders"].append(request["gender"])
                 # If this is a remote request, encode audio in the response
                 if message.context.get("klat_data") or \
                         message.msg_type == "neon.get_tts":
-                    responses[lang].setdefault("audio", {})
-                    responses[lang]["audio"][request["gender"]] = \
+                    responses[tts_lang].setdefault("audio", {})
+                    responses[tts_lang]["audio"][request["gender"]] = \
                         encode_file_to_base64_string(wav_file)
+                    LOG.debug(f"Got {tts_lang} {request['gender']} response")
             else:
                 raise RuntimeError(f"No audio generated for request: {request}")
         return responses

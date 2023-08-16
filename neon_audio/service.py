@@ -135,8 +135,8 @@ class NeonPlaybackService(PlaybackService):
         ident = message.context.get("ident") or "neon.get_tts.response"
         LOG.info(f"Handling TTS request: {ident}")
         if not message.data.get("speaker"):
-            LOG.warning(f"No speaker data with request, "
-                        f"core defaults will be used.")
+            LOG.info(f"No speaker data with request, "
+                     f"core defaults will be used.")
         if text:
             if not isinstance(text, str):
                 self.bus.emit(message.reply(
@@ -144,6 +144,7 @@ class NeonPlaybackService(PlaybackService):
                 return
             try:
                 responses = self.tts.get_multiple_tts(message)
+                LOG.debug(f"Emitting response: {responses}")
                 self.bus.emit(message.reply(ident, data=responses))
             except Exception as e:
                 LOG.exception(e)
