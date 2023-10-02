@@ -160,9 +160,8 @@ class NeonPlaybackThread(PlaybackThread):
 
 
 class WrappedTTS(TTS):
-    _stopwatch = Stopwatch("get_tts")
-
     def __new__(cls, base_engine, *args, **kwargs):
+        base_engine._stopwatch = Stopwatch("get_tts")
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
