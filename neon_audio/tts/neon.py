@@ -40,6 +40,7 @@ from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
+from neon_utils.metrics_utils import Stopwatch
 from neon_utils.signal_utils import create_signal, check_for_signal,\
     init_signal_bus
 from ovos_utils.log import LOG
@@ -159,6 +160,8 @@ class NeonPlaybackThread(PlaybackThread):
 
 
 class WrappedTTS(TTS):
+    _stopwatch = Stopwatch("get_tts")
+
     def __new__(cls, base_engine, *args, **kwargs):
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
@@ -311,7 +314,10 @@ class WrappedTTS(TTS):
                 create_signal("isSpeaking")
             # TODO: Should sentence and ident be added to message context? DM
             message.data["text"] = sentence
-            responses = self.get_multiple_tts(message, **kwargs)
+            with self._stopwatch:
+                responses = self.get_multiple_tts(message, **kwargs)
+            message.context.setdefault('timing', dict())
+            message.context['timing']['get_tts'] = self._stopwatch.time
             LOG.debug(f"responses={responses}")
 
             ident = message.data.get('speak_ident') or ident
