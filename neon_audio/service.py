@@ -33,6 +33,7 @@ from threading import Event
 from ovos_utils.log import LOG
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
+from neon_utils.metrics_utils import Stopwatch
 from ovos_audio.service import PlaybackService
 
 ovos_audio.tts.TTSFactory = TTSFactory
@@ -60,6 +61,8 @@ def on_started():
 
 
 class NeonPlaybackService(PlaybackService):
+    _stopwatch = Stopwatch("get_tts")
+
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
@@ -143,7 +146,10 @@ class NeonPlaybackService(PlaybackService):
                     ident, data={"error": f"text is not a str: {text}"}))
                 return
             try:
-                responses = self.tts.get_multiple_tts(message)
+                with self._stopwatch:
+                    responses = self.tts.get_multiple_tts(message)
+                message.context.setdefault('timing', dict())
+                message.context['timing']['get_tts'] = self._stopwatch.time
                 LOG.debug(f"Emitting response: {responses}")
                 self.bus.emit(message.reply(ident, data=responses))
             except Exception as e:
