@@ -214,6 +214,9 @@ class WrappedTTS(TTS):
         TTS.playback.start()
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
+        if isinstance(request, str):
+            # OVOS-compat signature; args[2] is lang
+            request = {"language": request}
         if any([x in inspect.signature(self.get_tts).parameters
                 for x in {"speaker", "wav_file"}]):
             LOG.info("Legacy Neon TTS signature found")
