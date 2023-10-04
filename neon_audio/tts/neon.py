@@ -40,9 +40,10 @@ from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
+from neon_utils.metrics_utils import Stopwatch
 from neon_utils.signal_utils import create_signal, check_for_signal,\
     init_signal_bus
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, log_deprecation
 
 from ovos_config.config import Configuration
 
@@ -73,7 +74,7 @@ def get_requested_tts_languages(msg) -> list:
 
         # If multiple profiles attached to message, get TTS for all
         elif profiles:
-            LOG.info(f"Got profiles: {profiles}")
+            LOG.debug(f"Got profiles: {profiles}")
             for profile in profiles:
                 username = profile.get("user", {}).get("username")
                 lang_prefs = profile.get("speech") or dict()
@@ -105,9 +106,8 @@ def get_requested_tts_languages(msg) -> list:
 
         # General non-server response, use yml configuration
         else:
-            # TODO: Deprecate this clause
+            log_deprecation("speaker data or profile context required", "2.0.0")
             from neon_utils.configuration_utils import get_neon_user_config
-            LOG.error("No profile information with request")
             user_config = get_neon_user_config()["speech"]
             tts_reqs.append({"speaker": tts_name,
                              "language": user_config["tts_language"],
@@ -160,6 +160,7 @@ class NeonPlaybackThread(PlaybackThread):
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
+        base_engine._stopwatch = Stopwatch("get_tts")
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
@@ -212,9 +213,10 @@ class WrappedTTS(TTS):
         TTS.playback.start()
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
+        # TODO: Signature should be made to match ovos-audio
         if any([x in inspect.signature(self.get_tts).parameters
                 for x in {"speaker", "wav_file"}]):
-            LOG.info("Legacy Neon TTS signature found")
+            LOG.info(f"Legacy Neon TTS signature found ({self.__class__.__name__})")
             key = str(hashlib.md5(
                 sentence.encode('utf-8', 'ignore')).hexdigest())
             file = kwargs.get("wav_file") or \
@@ -311,7 +313,10 @@ class WrappedTTS(TTS):
                 create_signal("isSpeaking")
             # TODO: Should sentence and ident be added to message context? DM
             message.data["text"] = sentence
-            responses = self.get_multiple_tts(message, **kwargs)
+            with self._stopwatch:
+                responses = self.get_multiple_tts(message, **kwargs)
+            message.context.setdefault('timing', dict())
+            message.context['timing']['get_tts'] = self._stopwatch.time
             LOG.debug(f"responses={responses}")
 
             ident = message.data.get('speak_ident') or ident
@@ -334,8 +339,7 @@ class WrappedTTS(TTS):
                         vis = self.viseme(r["phonemes"]) if r["phonemes"] \
                             else None
                         # queue for playback
-                        self.queue.put((self.audio_ext, wav_file, vis, ident,
-                                        listen))
+                        self.queue.put((wav_file, vis, listen, ident, message))
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
             LOG.warning(f'no Message associated with TTS request: {ident}')
