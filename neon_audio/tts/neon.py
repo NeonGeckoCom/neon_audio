@@ -43,7 +43,7 @@ from neon_utils.message_utils import resolve_message
 from neon_utils.metrics_utils import Stopwatch
 from neon_utils.signal_utils import create_signal, check_for_signal,\
     init_signal_bus
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, log_deprecation
 
 from ovos_config.config import Configuration
 
@@ -74,7 +74,7 @@ def get_requested_tts_languages(msg) -> list:
 
         # If multiple profiles attached to message, get TTS for all
         elif profiles:
-            LOG.info(f"Got profiles: {profiles}")
+            LOG.debug(f"Got profiles: {profiles}")
             for profile in profiles:
                 username = profile.get("user", {}).get("username")
                 lang_prefs = profile.get("speech") or dict()
@@ -106,9 +106,8 @@ def get_requested_tts_languages(msg) -> list:
 
         # General non-server response, use yml configuration
         else:
-            # TODO: Deprecate this clause
+            log_deprecation("speaker data or profile context required", "2.0.0")
             from neon_utils.configuration_utils import get_neon_user_config
-            LOG.error("No profile information with request")
             user_config = get_neon_user_config()["speech"]
             tts_reqs.append({"speaker": tts_name,
                              "language": user_config["tts_language"],
