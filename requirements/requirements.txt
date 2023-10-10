@@ -3,7 +3,8 @@ ovos-audio~=0.0.1,>=0.0.2a12,<0.0.2a14
 ovos-utils==0.0.35
 ovos-config~=0.0.10
 phoneme-guesser~=0.1
-ovos-plugin-manager~=0.0.22,>=0.0.24a5
+ovos-plugin-manager~=0.0.22,>=0.0.24a5,<0.0.24a10
+# TODO: ovos-plugin-manager 0.0.24a10 depends on an ovos-audio version newer than 0.0.2a14
 neon-utils[network]~=1.6
 click~=8.0
 click-default-group~=1.2
