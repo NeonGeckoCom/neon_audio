@@ -25,6 +25,7 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from time import time
 
 import ovos_audio.tts
 import ovos_plugin_manager.templates.tts
@@ -111,6 +112,8 @@ class NeonPlaybackService(PlaybackService):
 
         audio_finished = Event()
 
+        message.context.setdefault("timing", dict())
+        message.context["timing"].setdefault("speech_start", time())
         ident = message.data.get('speak_ident') or message.context.get('ident')
         if not ident:
             LOG.warning(f"Ident missing for speak: {message.data}")
