@@ -132,9 +132,9 @@ def get_requested_tts_languages(msg) -> list:
 
 
 class NeonPlaybackThread(PlaybackThread):
-    def __init__(self, queue):
+    def __init__(self, queue, bus=None, **kwargs):
         LOG.info("Initializing NeonPlaybackThread")
-        PlaybackThread.__init__(self, queue)
+        PlaybackThread.__init__(self, queue, bus=bus)
 
     def begin_audio(self, message=None):
         # TODO: Mark signals for deprecation
