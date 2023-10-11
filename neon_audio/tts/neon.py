@@ -132,7 +132,7 @@ def get_requested_tts_languages(msg) -> list:
 
 
 class NeonPlaybackThread(PlaybackThread):
-    def __init__(self, queue, bus=None, **kwargs):
+    def __init__(self, queue, bus=None):
         LOG.info("Initializing NeonPlaybackThread")
         PlaybackThread.__init__(self, queue, bus=bus)
 
