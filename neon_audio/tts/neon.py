@@ -200,13 +200,13 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
         return base_engine
 
-    def _init_playback(self):
+    def _init_playback(self, playback_thread: NeonPlaybackThread = None):
         # shutdown any previous thread
         if TTS.playback:
             TTS.playback.shutdown()
 
         init_signal_bus(self.bus)
-        TTS.playback = NeonPlaybackThread(TTS.queue)
+        TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
         TTS.playback.set_bus(self.bus)
         TTS.playback.attach_tts(self)
         if not TTS.playback.enclosure:

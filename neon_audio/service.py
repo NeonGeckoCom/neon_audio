@@ -94,6 +94,8 @@ class NeonPlaybackService(PlaybackService):
         ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.create_signal = create_signal
 
+        from neon_audio.tts.neon import NeonPlaybackThread
+        ovos_audio.service.PlaybackThread = NeonPlaybackThread
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
