@@ -37,7 +37,7 @@ from threading import Event
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 from ovos_bus_client import Message
-from ovos_plugin_manager.templates.tts import PlaybackThread
+# from ovos_plugin_manager.templates.tts import PlaybackThread
 from ovos_utils.messagebus import FakeBus
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -93,7 +93,11 @@ class TTSBaseClassTests(unittest.TestCase):
 
         self.assertEqual(self.tts.voice, "default")
         self.assertTrue(self.tts.queue.empty())
+
+        from ovos_audio.playback import PlaybackThread
+        from neon_audio.tts.neon import NeonPlaybackThread
         self.assertIsInstance(self.tts.playback, PlaybackThread)
+        self.assertIsInstance(self.tts.playback, NeonPlaybackThread)
 
         self.assertIsInstance(self.tts.spellings, dict)
         self.assertEqual(self.tts.tts_name, "DummyTTS")
