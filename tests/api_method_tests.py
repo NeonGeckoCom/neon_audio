@@ -129,48 +129,37 @@ class TestAPIMethods(unittest.TestCase):
         mock_tts = Mock()
         self.audio_service.execute_tts = mock_tts
 
-        # TODO: this destination handling should be deprecated
-        # 'audio' not in destination
-        message_invalid_destination = Message("speak",
-                                              {"utterance": "test"},
-                                              {"ident": "test",
-                                               "destination": ['invalid']})
-        self.audio_service.handle_speak(message_invalid_destination)
-        mock_tts.assert_called_with("test", "test", False)
+        session = {"session_id": "test_session"}
 
         # 'audio' in destination
         message_valid_destination = Message("speak",
                                             {"utterance": "test1"},
                                             {"ident": "test2",
                                              "destination": ['invalid',
-                                                             'audio']})
+                                                             'audio'],
+                                             "session": session})
         self.audio_service.handle_speak(message_valid_destination)
-        mock_tts.assert_called_with("test1", "test2", False)
+        mock_tts.assert_called_with("test1", "test_session", False,
+                                    message_valid_destination)
 
         # str 'audio' destination
         message_valid_destination = Message("speak",
                                             {"utterance": "test5"},
                                             {"ident": "test6",
-                                             "destination": 'audio'})
+                                             "destination": 'audio',
+                                             "session": session})
         self.audio_service.handle_speak(message_valid_destination)
-        mock_tts.assert_called_with("test5", "test6", False)
-
-        # TODO: this destination handling should be deprecated
-        # no destination context
-        message_no_destination = Message("speak",
-                                         {"utterance": "test3"},
-                                         {"ident": "test4"})
-        self.audio_service.handle_speak(message_no_destination)
-        mock_tts.assert_called_with("test3", "test4", False)
+        mock_tts.assert_called_with("test5", "test_session", False,
+                                    message_valid_destination)
 
         # Setup bus API handling
-        self.audio_service._playback_timeout = 60
+        self.audio_service._playback_timeout = 5
         msg = None
 
         def handle_tts(*args, **kwargs):
             nonlocal msg
             msg = dig_for_message()
-            ident = msg.data.get('speak_ident') or msg.data.get('ident')
+            ident = msg.context.get('speak_ident')
             if ident:
                 self.bus.emit(Message(ident))
 

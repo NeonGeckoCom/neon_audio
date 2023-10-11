@@ -31,7 +31,7 @@ import ovos_audio.tts
 import ovos_plugin_manager.templates.tts
 
 from threading import Event
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, log_deprecation
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.metrics_utils import Stopwatch
@@ -94,6 +94,8 @@ class NeonPlaybackService(PlaybackService):
         ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.create_signal = create_signal
 
+        from neon_audio.tts.neon import NeonPlaybackThread
+        ovos_audio.service.PlaybackThread = NeonPlaybackThread
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
@@ -107,30 +109,39 @@ class NeonPlaybackService(PlaybackService):
         if isinstance(message.context['destination'], str):
             message.context['destination'] = [message.context['destination']]
         if "audio" not in message.context['destination']:
-            LOG.warning("Adding audio to destination context")
+            log_deprecation("Adding audio to destination context", "2.0.0")
             message.context['destination'].append('audio')
 
         audio_finished = Event()
 
         message.context.setdefault("timing", dict())
         message.context["timing"].setdefault("speech_start", time())
-        ident = message.data.get('speak_ident') or message.context.get('ident')
-        if not ident:
-            LOG.warning(f"Ident missing for speak: {message.data}")
+
+        if message.context.get('ident'):
+            log_deprecation("ident context is deprecated. Use `session`",
+                            "2.0.0")
+            if not message.context.get('session'):
+                LOG.info("No session context. Adding session from ident.")
+
+        speak_id = message.data.get('speak_ident') or \
+            message.context.get('ident') or message.data.get('ident')
+        message.context['speak_ident'] = speak_id
+        if not speak_id:
+            LOG.warning(f"`speak_ident` data missing: {message.data}")
 
         def handle_finished(_):
             audio_finished.set()
-        if ident:
-            self.bus.once(ident, handle_finished)
+        if speak_id:
+            self.bus.once(speak_id, handle_finished)
         else:
             audio_finished.set()
 
         PlaybackService.handle_speak(self, message)
         if not audio_finished.wait(self._playback_timeout):
-            LOG.warning(f"Playback not completed for {ident} within "
+            LOG.warning(f"Playback not completed for {speak_id} within "
                         f"{self._playback_timeout} seconds")
-        elif ident:
-            LOG.debug(f"Playback completed for: {ident}")
+        elif speak_id:
+            LOG.debug(f"Playback completed for: {speak_id}")
 
     def handle_get_tts(self, message):
         """
