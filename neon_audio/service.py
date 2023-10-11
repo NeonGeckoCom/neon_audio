@@ -115,6 +115,7 @@ class NeonPlaybackService(PlaybackService):
         message.context.setdefault("timing", dict())
         message.context["timing"].setdefault("speech_start", time())
         ident = message.data.get('speak_ident') or message.context.get('ident')
+        message.context['ident'] = ident
         if not ident:
             LOG.warning(f"Ident missing for speak: {message.data}")
 

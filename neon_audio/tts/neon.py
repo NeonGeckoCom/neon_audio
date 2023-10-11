@@ -151,8 +151,9 @@ class NeonPlaybackThread(PlaybackThread):
         if not ident and len(self._now_playing) >= 5 and \
                 isinstance(self._now_playing[4], Message):
             LOG.debug("Handling new style playback")
-            ident = self._now_playing[4].context.get('session',
-                                                     {}).get('session_id')
+            ident = self._now_playing[4].context.get('ident') or \
+                self._now_playing[4].context.get('session',
+                                                 {}).get('session_id')
         super()._play()
         LOG.info(f"Played {ident}")
         self.bus.emit(Message(ident))
