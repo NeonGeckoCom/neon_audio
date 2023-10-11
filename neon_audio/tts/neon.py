@@ -211,7 +211,8 @@ class WrappedTTS(TTS):
         TTS.playback.attach_tts(self)
         if not TTS.playback.enclosure:
             TTS.playback.enclosure = EnclosureAPI(self.bus)
-        TTS.playback.start()
+        if not TTS.playback.is_running:
+            TTS.playback.start()
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
         # TODO: Signature should be made to match ovos-audio
