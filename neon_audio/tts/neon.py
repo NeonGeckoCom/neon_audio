@@ -35,7 +35,7 @@ from json_database import JsonStorageXDG
 from ovos_bus_client.message import Message
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
-from ovos_plugin_manager.templates.tts import TTS, PlaybackThread
+from ovos_plugin_manager.templates.tts import TTS
 from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
@@ -44,7 +44,7 @@ from neon_utils.metrics_utils import Stopwatch
 from neon_utils.signal_utils import create_signal, check_for_signal,\
     init_signal_bus
 from ovos_utils.log import LOG, log_deprecation
-
+from ovos_audio.playback import PlaybackThread
 from ovos_config.config import Configuration
 
 
@@ -133,6 +133,7 @@ def get_requested_tts_languages(msg) -> list:
 
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue):
+        LOG.info("Initializing NeonPlaybackThread")
         PlaybackThread.__init__(self, queue)
 
     def begin_audio(self, message=None):
@@ -183,10 +184,13 @@ class WrappedTTS(TTS):
         base_engine.lang = base_engine.lang or language_config.get("user",
                                                                    "en-us")
         try:
-            base_engine.lang_detector = \
-                OVOSLangDetectionFactory.create(language_config)
-            base_engine.translator = \
-                OVOSLangTranslationFactory.create(language_config)
+            if language_config.get('detection_module'):
+                # Prevent loading a detector if not configured
+                base_engine.lang_detector = \
+                    OVOSLangDetectionFactory.create(language_config)
+            if language_config.get('translation_module'):
+                base_engine.translator = \
+                    OVOSLangTranslationFactory.create(language_config)
         except ValueError as e:
             LOG.error(e)
             base_engine.lang_detector = None
@@ -204,7 +208,9 @@ class WrappedTTS(TTS):
         # shutdown any previous thread
         if TTS.playback:
             TTS.playback.shutdown()
-
+        if not isinstance(playback_thread, NeonPlaybackThread):
+            LOG.exception("Received invalid playback_thread")
+            playback_thread = None
         init_signal_bus(self.bus)
         TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
         TTS.playback.set_bus(self.bus)
