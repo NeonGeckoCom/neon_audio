@@ -207,6 +207,10 @@ class WrappedTTS(TTS):
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
         # shutdown any previous thread
         if TTS.playback:
+            if TTS.playback == playback_thread:
+                # TODO: This shouldn't happen and is probably a bug
+                LOG.warning("Playback already initialized. skipping init")
+                return
             TTS.playback.shutdown()
         if not isinstance(playback_thread, NeonPlaybackThread):
             LOG.exception("Received invalid playback_thread")
