@@ -67,7 +67,8 @@ class TestAPIMethods(unittest.TestCase):
             ready_event.set()
 
         cls.audio_service = NeonPlaybackService(daemonic=True, bus=cls.bus,
-                                                ready_hook=on_ready)
+                                                ready_hook=on_ready,
+                                                disable_ocp=True)
         assert cls.audio_service.config == _TEST_CONFIG
         cls.audio_service.start()
         if not ready_event.wait(30):

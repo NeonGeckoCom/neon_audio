@@ -67,7 +67,8 @@ class NeonPlaybackService(PlaybackService):
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
-                 audio_config=None, daemonic=False, bus=None):
+                 audio_config=None, daemonic=False, bus=None,
+                 disable_ocp=False):
         """
         Creates a Speech service thread
         :param ready_hook: function callback when service is ready
@@ -78,6 +79,7 @@ class NeonPlaybackService(PlaybackService):
         :param audio_config: global core configuration override
         :param daemonic: if True, run this thread as a daemon
         :param bus: Connected MessageBusClient
+        :param disable_ocp: if True, disable OVOS Common Play service
         """
         if audio_config:
             LOG.info("Updating global config with passed config")
@@ -97,7 +99,8 @@ class NeonPlaybackService(PlaybackService):
         from neon_audio.tts.neon import NeonPlaybackThread
         ovos_audio.service.PlaybackThread = NeonPlaybackThread
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
-                                 alive_hook, started_hook, watchdog, bus)
+                                 alive_hook, started_hook, watchdog, bus,
+                                 disable_ocp)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API
