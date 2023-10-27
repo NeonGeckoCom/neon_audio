@@ -10,6 +10,8 @@ ovos-bus-client~=0.0.3
 
 # Default OCP backend + plugins
 ovos-plugin-common-play~=0.0.5
+mycroft-messagebus-client~=0.10
+# mycroft-messagebus-client patching OCP dependency
 ovos-ocp-m3u-plugin~=0.0.1
 ovos-ocp-rss-plugin~=0.0.2
 ovos-ocp-files-plugin~=0.13
