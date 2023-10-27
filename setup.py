@@ -84,7 +84,8 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'neon_audio_client=neon_audio.__main__:main',
+            # TODO: Deprecate neon_audio_client entrypoint
+            'neon_audio_client=neon_audio.__main__:deprecated_entrypoint',
             'neon-audio=neon_audio.cli:neon_audio_cli'
         ]
     }

@@ -32,17 +32,19 @@ import os
 
 from os.path import dirname
 from json_database import JsonStorageXDG
-from mycroft_bus_client.message import Message
+from ovos_bus_client.message import Message
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
-from ovos_plugin_manager.templates.tts import TTS, PlaybackThread
+from ovos_plugin_manager.templates.tts import TTS
 from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
-from neon_utils.signal_utils import create_signal
-from ovos_utils.log import LOG
-
+from neon_utils.metrics_utils import Stopwatch
+from neon_utils.signal_utils import create_signal, check_for_signal,\
+    init_signal_bus
+from ovos_utils.log import LOG, log_deprecation
+from ovos_audio.playback import PlaybackThread
 from ovos_config.config import Configuration
 
 
@@ -62,16 +64,17 @@ def get_requested_tts_languages(msg) -> list:
         # If speaker data is present, use it
         if msg.data.get("speaker"):
             speaker = msg.data.get("speaker")
-            tts_reqs.append({"speaker": speaker["name"],
-                             "language": speaker["language"],
-                             "gender": speaker["gender"],
+            tts_reqs.append({"speaker": speaker.get("name", "Neon"),
+                             "language": speaker.get("language",
+                                                     msg.data.get("lang")),
+                             "gender": speaker.get("gender", default_gender),
                              "voice": speaker.get("voice")
                              })
-            LOG.debug(f">>> speaker={speaker}")
+            LOG.info(f">>> speaker={speaker}")
 
         # If multiple profiles attached to message, get TTS for all
         elif profiles:
-            LOG.info(f"Got profiles: {profiles}")
+            LOG.debug(f"Got profiles: {profiles}")
             for profile in profiles:
                 username = profile.get("user", {}).get("username")
                 lang_prefs = profile.get("speech") or dict()
@@ -103,9 +106,8 @@ def get_requested_tts_languages(msg) -> list:
 
         # General non-server response, use yml configuration
         else:
-            # TODO: Deprecate this clause
+            log_deprecation("speaker data or profile context required", "2.0.0")
             from neon_utils.configuration_utils import get_neon_user_config
-            LOG.error("No profile information with request")
             user_config = get_neon_user_config()["speech"]
             tts_reqs.append({"speaker": tts_name,
                              "language": user_config["tts_language"],
@@ -130,11 +132,29 @@ def get_requested_tts_languages(msg) -> list:
 
 
 class NeonPlaybackThread(PlaybackThread):
-    def __init__(self, queue):
-        PlaybackThread.__init__(self, queue)
+    def __init__(self, queue, bus=None):
+        LOG.info("Initializing NeonPlaybackThread")
+        PlaybackThread.__init__(self, queue, bus=bus)
+
+    def begin_audio(self, message=None):
+        # TODO: Mark signals for deprecation
+        check_for_signal("isSpeaking")
+        create_signal("isSpeaking")
+        PlaybackThread.begin_audio(self, message)
+
+    def end_audio(self, listen, message=None):
+        PlaybackThread.end_audio(self, listen, message)
+        # TODO: Mark signals for deprecation
+        check_for_signal("isSpeaking")
 
     def _play(self):
         ident = self._now_playing[3]
+        if not ident and len(self._now_playing) >= 5 and \
+                isinstance(self._now_playing[4], Message):
+            LOG.debug("Handling new style playback")
+            ident = self._now_playing[4].context.get('ident') or \
+                self._now_playing[4].context.get('session',
+                                                 {}).get('session_id')
         super()._play()
         LOG.info(f"Played {ident}")
         self.bus.emit(Message(ident))
@@ -142,6 +162,7 @@ class NeonPlaybackThread(PlaybackThread):
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
+        base_engine._stopwatch = Stopwatch("get_tts")
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
@@ -163,10 +184,13 @@ class WrappedTTS(TTS):
         base_engine.lang = base_engine.lang or language_config.get("user",
                                                                    "en-us")
         try:
-            base_engine.lang_detector = \
-                OVOSLangDetectionFactory.create(language_config)
-            base_engine.translator = \
-                OVOSLangTranslationFactory.create(language_config)
+            if language_config.get('detection_module'):
+                # Prevent loading a detector if not configured
+                base_engine.lang_detector = \
+                    OVOSLangDetectionFactory.create(language_config)
+            if language_config.get('translation_module'):
+                base_engine.translator = \
+                    OVOSLangTranslationFactory.create(language_config)
         except ValueError as e:
             LOG.error(e)
             base_engine.lang_detector = None
@@ -180,22 +204,34 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
         return base_engine
 
-    def _init_playback(self):
+    def _init_playback(self, playback_thread: NeonPlaybackThread = None):
         # shutdown any previous thread
         if TTS.playback:
+            if TTS.playback == playback_thread:
+                # TODO: This shouldn't happen and is probably a bug
+                LOG.warning("Playback already initialized. skipping init")
+                return
             TTS.playback.shutdown()
-
-        TTS.playback = NeonPlaybackThread(TTS.queue)
+        if not isinstance(playback_thread, NeonPlaybackThread):
+            LOG.exception("Received invalid playback_thread")
+            playback_thread = None
+        init_signal_bus(self.bus)
+        TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
         TTS.playback.set_bus(self.bus)
         TTS.playback.attach_tts(self)
         if not TTS.playback.enclosure:
             TTS.playback.enclosure = EnclosureAPI(self.bus)
-        TTS.playback.start()
+        if not TTS.playback.is_alive():
+            try:
+                TTS.playback.start()
+            except RuntimeError:
+                LOG.exception("Error starting the playback thread")
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
+        # TODO: Signature should be made to match ovos-audio
         if any([x in inspect.signature(self.get_tts).parameters
                 for x in {"speaker", "wav_file"}]):
-            LOG.info("Legacy Neon TTS signature found")
+            LOG.info(f"Legacy Neon TTS signature found ({self.__class__.__name__})")
             key = str(hashlib.md5(
                 sentence.encode('utf-8', 'ignore')).hexdigest())
             file = kwargs.get("wav_file") or \
@@ -227,19 +263,21 @@ class WrappedTTS(TTS):
         LOG.debug(f"tts_requested={tts_requested}")
         sentence = message.data["text"]
         sentence = self.validate_ssml(sentence)
+        skill_lang = message.data.get('lang') or self.lang
+        LOG.debug(f"utterance_lang={skill_lang}")
         responses = {}
         for request in tts_requested:
-            lang = kwargs["lang"] = request["language"]
+            tts_lang = kwargs["lang"] = request["language"]
             # Check if requested tts lang matches internal (text) lang
             # TODO: `self.lang` should come from the incoming message
-            if lang.split("-")[0] != self.lang.split("-")[0]:
-                self.cached_translations.setdefault(lang, {})
+            if tts_lang.split("-")[0] != skill_lang.split("-")[0]:
+                self.cached_translations.setdefault(tts_lang, {})
 
-                tx_sentence = self.cached_translations[lang].get(sentence)
+                tx_sentence = self.cached_translations[tts_lang].get(sentence)
                 if not tx_sentence:
-                    tx_sentence = self.translator.translate(sentence, lang,
-                                                            self.lang)
-                    self.cached_translations[lang][sentence] = tx_sentence
+                    tx_sentence = self.translator.translate(sentence, tts_lang,
+                                                            skill_lang)
+                    self.cached_translations[tts_lang][sentence] = tx_sentence
                     self.cached_translations.store()
                 LOG.info(f"Got translated sentence: {tx_sentence}")
             else:
@@ -247,22 +285,22 @@ class WrappedTTS(TTS):
             wav_file, phonemes = self._get_tts(tx_sentence, request, **kwargs)
 
             # If this is the first response, populate translation and phonemes
-            if not responses.get(lang):
-                responses[lang] = {"sentence": tx_sentence,
-                                   "translated": tx_sentence != sentence,
-                                   "phonemes": phonemes,
-                                   "genders": list()}
+            responses.setdefault(tts_lang, {"sentence": tx_sentence,
+                                            "translated": tx_sentence != sentence,
+                                            "phonemes": phonemes,
+                                            "genders": list()})
 
             # Append the generated audio from this request
             if os.path.isfile(wav_file):
-                responses[lang][request["gender"]] = wav_file
-                responses[lang]["genders"].append(request["gender"])
+                responses[tts_lang][request["gender"]] = wav_file
+                responses[tts_lang]["genders"].append(request["gender"])
                 # If this is a remote request, encode audio in the response
                 if message.context.get("klat_data") or \
                         message.msg_type == "neon.get_tts":
-                    responses[lang].setdefault("audio", {})
-                    responses[lang]["audio"][request["gender"]] = \
+                    responses[tts_lang].setdefault("audio", {})
+                    responses[tts_lang]["audio"][request["gender"]] = \
                         encode_file_to_base64_string(wav_file)
+                    LOG.debug(f"Got {tts_lang} {request['gender']} response")
             else:
                 raise RuntimeError(f"No audio generated for request: {request}")
         return responses
@@ -290,7 +328,10 @@ class WrappedTTS(TTS):
                 create_signal("isSpeaking")
             # TODO: Should sentence and ident be added to message context? DM
             message.data["text"] = sentence
-            responses = self.get_multiple_tts(message, **kwargs)
+            with self._stopwatch:
+                responses = self.get_multiple_tts(message, **kwargs)
+            message.context.setdefault('timing', dict())
+            message.context['timing']['get_tts'] = self._stopwatch.time
             LOG.debug(f"responses={responses}")
 
             ident = message.data.get('speak_ident') or ident
@@ -313,10 +354,10 @@ class WrappedTTS(TTS):
                         vis = self.viseme(r["phonemes"]) if r["phonemes"] \
                             else None
                         # queue for playback
-                        self.queue.put((self.audio_ext, wav_file, vis, ident,
-                                        listen))
+                        self.queue.put((wav_file, vis, listen, ident, message))
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
             LOG.warning(f'no Message associated with TTS request: {ident}')
             assert isinstance(self, TTS)
+            create_signal("isSpeaking")
             TTS.execute(self, sentence, ident, listen, **kwargs)

@@ -25,18 +25,20 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from threading import Event
+from time import time
 
-import mycroft.audio.tts
+import ovos_audio.tts
 import ovos_plugin_manager.templates.tts
 
-from ovos_utils.log import LOG
+from threading import Event
+from ovos_utils.log import LOG, log_deprecation
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
+from neon_utils.metrics_utils import Stopwatch
+from ovos_audio.service import PlaybackService
 
-mycroft.audio.tts.TTSFactory = TTSFactory
-
-from mycroft.audio.service import PlaybackService
+ovos_audio.tts.TTSFactory = TTSFactory
+ovos_audio.service.TTSFactory = TTSFactory
 
 
 def on_ready():
@@ -60,10 +62,13 @@ def on_started():
 
 
 class NeonPlaybackService(PlaybackService):
+    _stopwatch = Stopwatch("get_tts")
+
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
-                 audio_config=None, daemonic=False, bus=None):
+                 audio_config=None, daemonic=False, bus=None,
+                 disable_ocp=False):
         """
         Creates a Speech service thread
         :param ready_hook: function callback when service is ready
@@ -74,6 +79,7 @@ class NeonPlaybackService(PlaybackService):
         :param audio_config: global core configuration override
         :param daemonic: if True, run this thread as a daemon
         :param bus: Connected MessageBusClient
+        :param disable_ocp: if True, disable OVOS Common Play service
         """
         if audio_config:
             LOG.info("Updating global config with passed config")
@@ -86,45 +92,59 @@ class NeonPlaybackService(PlaybackService):
         init_signal_bus(bus)
         init_signal_handlers()
         from neon_utils.signal_utils import create_signal, check_for_signal
-        mycroft.audio.service.check_for_signal = check_for_signal
+        ovos_audio.service.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.create_signal = create_signal
 
+        from neon_audio.tts.neon import NeonPlaybackThread
+        ovos_audio.service.PlaybackThread = NeonPlaybackThread
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
-                                 alive_hook, started_hook, watchdog, bus)
+                                 alive_hook, started_hook, watchdog, bus,
+                                 disable_ocp)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API
         self._playback_timeout = 120
-        self.setDaemon(daemonic)
+        self.daemon = daemonic
 
     def handle_speak(self, message):
         message.context.setdefault('destination', [])
         if isinstance(message.context['destination'], str):
             message.context['destination'] = [message.context['destination']]
         if "audio" not in message.context['destination']:
-            LOG.warning("Adding audio to destination context")
+            log_deprecation("Adding audio to destination context", "2.0.0")
             message.context['destination'].append('audio')
 
         audio_finished = Event()
 
-        ident = message.data.get('speak_ident') or message.context.get('ident')
-        if not ident:
-            LOG.warning(f"Ident missing for speak: {message.data}")
+        message.context.setdefault("timing", dict())
+        message.context["timing"].setdefault("speech_start", time())
+
+        if message.context.get('ident'):
+            log_deprecation("ident context is deprecated. Use `session`",
+                            "2.0.0")
+            if not message.context.get('session'):
+                LOG.info("No session context. Adding session from ident.")
+
+        speak_id = message.data.get('speak_ident') or \
+            message.context.get('ident') or message.data.get('ident')
+        message.context['speak_ident'] = speak_id
+        if not speak_id:
+            LOG.warning(f"`speak_ident` data missing: {message.data}")
 
         def handle_finished(_):
             audio_finished.set()
-        if ident:
-            self.bus.once(ident, handle_finished)
+        if speak_id:
+            self.bus.once(speak_id, handle_finished)
         else:
             audio_finished.set()
 
         PlaybackService.handle_speak(self, message)
         if not audio_finished.wait(self._playback_timeout):
-            LOG.warning(f"Playback not completed for {ident} within "
+            LOG.warning(f"Playback not completed for {speak_id} within "
                         f"{self._playback_timeout} seconds")
-        elif ident:
-            LOG.debug(f"Playback completed for: {ident}")
+        elif speak_id:
+            LOG.debug(f"Playback completed for: {speak_id}")
 
     def handle_get_tts(self, message):
         """
@@ -135,15 +155,19 @@ class NeonPlaybackService(PlaybackService):
         ident = message.context.get("ident") or "neon.get_tts.response"
         LOG.info(f"Handling TTS request: {ident}")
         if not message.data.get("speaker"):
-            LOG.warning(f"No speaker data with request, "
-                        f"core defaults will be used.")
+            LOG.info(f"No speaker data with request, "
+                     f"core defaults will be used.")
         if text:
             if not isinstance(text, str):
                 self.bus.emit(message.reply(
                     ident, data={"error": f"text is not a str: {text}"}))
                 return
             try:
-                responses = self.tts.get_multiple_tts(message)
+                with self._stopwatch:
+                    responses = self.tts.get_multiple_tts(message)
+                message.context.setdefault('timing', dict())
+                message.context['timing']['get_tts'] = self._stopwatch.time
+                LOG.debug(f"Emitting response: {responses}")
                 self.bus.emit(message.reply(ident, data=responses))
             except Exception as e:
                 LOG.exception(e)

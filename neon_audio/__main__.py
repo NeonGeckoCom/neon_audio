@@ -27,30 +27,32 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from neon_utils.messagebus_utils import get_messagebus
-from neon_utils.configuration_utils import init_config_dir
 from neon_utils.log_utils import init_log
+from neon_utils.process_utils import start_malloc, snapshot_malloc, print_malloc
+from neon_utils.signal_utils import init_signal_bus, \
+    init_signal_handlers, check_for_signal
+from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
+from ovos_utils.process_utils import reset_sigint_handler, PIDLock as Lock
 
-from mycroft.lock import Lock
+from neon_audio.service import NeonPlaybackService
 
 
 def main(*args, **kwargs):
     if kwargs.get("config"):
         LOG.warning("Found `config` kwarg, but expect `audio_config`")
         kwargs["audio_config"] = kwargs.pop("config")
-
-    init_config_dir()
+    if kwargs.get("audio_config"):
+        LOG.warning("Passed configuration should be written to disk before"
+                    "module launch")
     init_log(log_name="audio")
+    malloc_running = start_malloc(stack_depth=4)
     bus = get_messagebus()
     kwargs["bus"] = bus
-    from neon_utils.signal_utils import init_signal_bus, \
-        init_signal_handlers, check_for_signal
+
     init_signal_bus(bus)
     init_signal_handlers()
-
-    from neon_audio.service import NeonPlaybackService
-    from mycroft.util import reset_sigint_handler, wait_for_exit_signal
 
     reset_sigint_handler()
     check_for_signal("isSpeaking")
@@ -59,7 +61,19 @@ def main(*args, **kwargs):
     service = NeonPlaybackService(*args, **kwargs)
     service.start()
     wait_for_exit_signal()
+    if malloc_running:
+        try:
+            print_malloc(snapshot_malloc())
+        except Exception as e:
+            LOG.error(e)
     service.shutdown()
+
+
+def deprecated_entrypoint():
+    from ovos_utils.log import log_deprecation
+    log_deprecation("Use `neon-audio run` in place of "
+                    "`neon_audio_client`", "2.0.0")
+    main()
 
 
 if __name__ == '__main__':

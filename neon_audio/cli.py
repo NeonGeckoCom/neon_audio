@@ -30,43 +30,44 @@ import click
 
 from click_default_group import DefaultGroup
 from neon_utils.packaging_utils import get_package_version_spec
-
+from neon_utils.configuration_utils import init_config_dir
 from ovos_config.config import Configuration
 
 
 @click.group("neon-audio", cls=DefaultGroup,
              no_args_is_help=True, invoke_without_command=True,
-             help="Neon Core Commands\n\n"
+             help="Neon Audio Commands\n\n"
                   "See also: neon COMMAND --help")
 @click.option("--version", "-v", is_flag=True, required=False,
               help="Print the current version")
 def neon_audio_cli(version: bool = False):
     if version:
-        click.echo(f"neon_speech version "
-                   f"{get_package_version_spec('neon_speech')}")
+        click.echo(f"neon_audio version "
+                   f"{get_package_version_spec('neon_audio')}")
 
 
 @neon_audio_cli.command(help="Start Neon Audio module")
 @click.option("--module", "-m", default=None,
-              help="STT Plugin to configure")
+              help="TTS Plugin to configure")
 @click.option("--package", "-p", default=None,
               help="TTS package spec to install")
 @click.option("--force-install", "-f", default=False, is_flag=True,
               help="Force pip installation of configured module")
 def run(module, package, force_install):
+    init_config_dir()
     from neon_audio.__main__ import main
-    audio_config = Configuration()
     if force_install or module or package:
         install_plugin(module, package, force_install)
-    if module and module != audio_config["tts"]["module"]:
-        click.echo("Updating runtime config with module and package")
-        package = package or audio_config["tts"].get("package_spec")
-        audio_config["tts"]["module"] = module
-        audio_config["tts"]["package_spec"] = package
-    click.echo(f'Loading TTS Module: {audio_config["tts"]["module"]}')
-    click.echo(f'TTS Config={audio_config["tts"]}')
+    if module:
+        audio_config = Configuration()
+        if module != audio_config["tts"]["module"]:
+            from neon_audio.utils import patch_config
+            click.echo("Updating config with module and package")
+            package = package or audio_config["tts"].get("package_spec")
+            patch_config({"tts": {"module": module,
+                                  "package_spec": package}})
     click.echo("Starting Audio Client")
-    main(audio_config=audio_config)
+    main()
     click.echo("Audio Client Shutdown")
 
 
