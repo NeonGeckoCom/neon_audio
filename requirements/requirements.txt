@@ -10,7 +10,7 @@ ovos-bus-client~=0.0.3
 
 # Default OCP backend + plugins
 ovos-plugin-common-play==0.0.6a2
-# TODO: Pinned to latest available version with no alpha deps
+# TODO: Pinned to latest compatible version with no alpha deps (a9 conflicts with ovos-core)
 ovos-ocp-m3u-plugin~=0.0.1
 ovos-ocp-rss-plugin~=0.0.2
 ovos-ocp-files-plugin~=0.13
