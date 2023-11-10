@@ -31,6 +31,8 @@ import inspect
 import os
 
 from os.path import dirname
+from time import time
+
 from json_database import JsonStorageXDG
 from ovos_bus_client.message import Message
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
@@ -339,6 +341,7 @@ class WrappedTTS(TTS):
             # TODO dedicated klat handler/plugin
             if "klat_data" in message.context:
                 LOG.info("Sending klat.response")
+                message.context['timing']['response_sent'] = time()
                 self.bus.emit(
                     message.forward("klat.response",
                                     {"responses": responses,
