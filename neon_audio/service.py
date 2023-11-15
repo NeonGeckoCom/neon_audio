@@ -134,6 +134,8 @@ class NeonPlaybackService(PlaybackService):
 
         def handle_finished(_):
             audio_finished.set()
+
+        # If we have an identifier, add a callback to wait for playback
         if speak_id:
             self.bus.once(speak_id, handle_finished)
         else:
@@ -143,6 +145,7 @@ class NeonPlaybackService(PlaybackService):
         if not audio_finished.wait(self._playback_timeout):
             LOG.warning(f"Playback not completed for {speak_id} within "
                         f"{self._playback_timeout} seconds")
+            self.bus.remove(speak_id, handle_finished)
         elif speak_id:
             LOG.debug(f"Playback completed for: {speak_id}")
 
@@ -157,22 +160,26 @@ class NeonPlaybackService(PlaybackService):
         if not message.data.get("speaker"):
             LOG.info(f"No speaker data with request, "
                      f"core defaults will be used.")
+        message.context.setdefault('timing', dict())
         if text:
             if not isinstance(text, str):
+                message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(
                     ident, data={"error": f"text is not a str: {text}"}))
                 return
             try:
                 with self._stopwatch:
                     responses = self.tts.get_multiple_tts(message)
-                message.context.setdefault('timing', dict())
                 message.context['timing']['get_tts'] = self._stopwatch.time
                 LOG.debug(f"Emitting response: {responses}")
+                message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(ident, data=responses))
             except Exception as e:
                 LOG.exception(e)
+                message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(ident, data={"error": repr(e)}))
         else:
+            message.context['timing']['response_sent'] = time()
             self.bus.emit(message.reply(ident,
                                         data={"error": "No text provided."}))
 

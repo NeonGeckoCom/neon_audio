@@ -260,6 +260,9 @@ class WrappedTTS(TTS):
     def get_multiple_tts(self, message, **kwargs) -> dict:
         """
         Get tts responses based on message context
+        @returns: dict of <language>: {<gender>: <wav_file>, "genders" []}.
+            For remote requests, each `language` also contains:
+            "audio": {<gender>: <b64_encoded_audio>}
         """
         tts_requested = get_requested_tts_languages(message)
         LOG.debug(f"tts_requested={tts_requested}")
@@ -336,7 +339,7 @@ class WrappedTTS(TTS):
             message.context['timing']['get_tts'] = self._stopwatch.time
             LOG.debug(f"responses={responses}")
 
-            ident = message.data.get('speak_ident') or ident
+            ident = message.context.get('speak_ident') or ident
 
             # TODO dedicated klat handler/plugin
             if "klat_data" in message.context:
@@ -346,7 +349,9 @@ class WrappedTTS(TTS):
                     message.forward("klat.response",
                                     {"responses": responses,
                                      "speaker": message.data.get("speaker")}))
-                self.bus.emit(Message(ident))
+                # Emit `ident` message to indicate this transaction is complete
+                LOG.debug(f"Notify playback completed for {ident}")
+                self.bus.emit(message.forward(ident))
             else:
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
