@@ -155,17 +155,14 @@ class NeonPlaybackThread(PlaybackThread):
         check_for_signal("isSpeaking")
 
     def _play(self):
+        # wav_file, vis, listen, ident, message
         ident = self._now_playing[3]
-        if not ident and len(self._now_playing) >= 5 and \
-                isinstance(self._now_playing[4], Message):
-            LOG.debug("Handling new style playback")
-            ident = self._now_playing[4].context.get('ident') or \
-                self._now_playing[4].context.get('session',
-                                                 {}).get('session_id')
-            message = self._now_playing[4]
-        else:
-            LOG.error(f"Got outdated playback queue item: {self._now_playing}")
-            message = Message("")
+        message = self._now_playing[4]
+        if not ident:
+            LOG.error("Missing ident. Try getting from Message context")
+            ident = message.context.get('ident') or \
+                message.context.get('session', {}).get('session_id')
+
         super()._play()
         # Notify playback is finished
         LOG.info(f"Played {ident}")
