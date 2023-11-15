@@ -92,7 +92,7 @@ class TestAPIMethods(unittest.TestCase):
             if key != "timing":
                 self.assertEqual(context[key], tts_resp.context[key])
         self.assertIsInstance(tts_resp.context['timing']['response_sent'],
-                              float)
+                              float, tts_resp.context['timing'])
         self.assertIsInstance(tts_resp.data.get("error"), str)
         self.assertEqual(tts_resp.data["error"], "No text provided.")
 
@@ -107,7 +107,7 @@ class TestAPIMethods(unittest.TestCase):
         for key in context:
             self.assertEqual(context[key], tts_resp.context[key])
         self.assertIsInstance(tts_resp.context['timing']['response_sent'],
-                              float)
+                              float, tts_resp.context['timing'])
         self.assertTrue(tts_resp.data.get("error")
                         .startswith("text is not a str:"))
 
@@ -123,7 +123,7 @@ class TestAPIMethods(unittest.TestCase):
         for key in context:
             self.assertEqual(context[key], tts_resp.context[key])
         self.assertIsInstance(tts_resp.context['timing']['response_sent'],
-                              float)
+                              float, tts_resp.context['timing'])
         responses = tts_resp.data
         self.assertIsInstance(responses, dict)
         print(responses)

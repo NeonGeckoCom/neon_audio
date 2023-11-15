@@ -163,6 +163,7 @@ class NeonPlaybackService(PlaybackService):
         message.context.setdefault('timing', dict())
         if text:
             if not isinstance(text, str):
+                message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(
                     ident, data={"error": f"text is not a str: {text}"}))
                 return
