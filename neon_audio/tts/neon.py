@@ -138,14 +138,19 @@ class NeonPlaybackThread(PlaybackThread):
         LOG.info("Initializing NeonPlaybackThread")
         PlaybackThread.__init__(self, queue, bus=bus)
 
-    def begin_audio(self, message=None):
+    def begin_audio(self, message: Message = None):
         # TODO: Mark signals for deprecation
         check_for_signal("isSpeaking")
         create_signal("isSpeaking")
+        assert message is not None
+        message.context.setdefault("timing", dict())
+        message.context['timing']['audio_begin'] = time()
         PlaybackThread.begin_audio(self, message)
 
     def end_audio(self, listen, message=None):
+        assert message is not None
         PlaybackThread.end_audio(self, listen, message)
+        message.context['timing']['audio_end'] = time()
         # TODO: Mark signals for deprecation
         check_for_signal("isSpeaking")
 
@@ -157,9 +162,21 @@ class NeonPlaybackThread(PlaybackThread):
             ident = self._now_playing[4].context.get('ident') or \
                 self._now_playing[4].context.get('session',
                                                  {}).get('session_id')
+            message = self._now_playing[4]
+        else:
+            LOG.error(f"Got outdated playback queue item: {self._now_playing}")
+            message = Message("")
         super()._play()
+        # Notify playback is finished
         LOG.info(f"Played {ident}")
-        self.bus.emit(Message(ident))
+        self.bus.emit(message.forward(ident))
+
+        # Report timing metrics
+        message.context["timestamp"] = time()
+        self.bus.emit(message.forward("neon.metric",
+                                      {"name": "local_interaction",
+                                       "timestamp": time(),
+                                       "timing": message.context['timing']}))
 
 
 class WrappedTTS(TTS):
@@ -352,6 +369,11 @@ class WrappedTTS(TTS):
                 # Emit `ident` message to indicate this transaction is complete
                 LOG.debug(f"Notify playback completed for {ident}")
                 self.bus.emit(message.forward(ident))
+                message.context["timestamp"] = time()
+                self.bus.emit(message.forward("neon.metric",
+                                              {"name": "klat_interaction",
+                                               "timestamp": time(),
+                                               "timing": message.context['timing']}))
             else:
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
