@@ -145,7 +145,7 @@ class NeonPlaybackService(PlaybackService):
         if not audio_finished.wait(self._playback_timeout):
             LOG.warning(f"Playback not completed for {speak_id} within "
                         f"{self._playback_timeout} seconds")
-            self.bus.remove_all_listeners(speak_id)
+            self.bus.remove(speak_id, handle_finished)
         elif speak_id:
             LOG.debug(f"Playback completed for: {speak_id}")
 
