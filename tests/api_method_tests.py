@@ -86,9 +86,13 @@ class TestAPIMethods(unittest.TestCase):
                    "ident": "123",
                    "user": "TestRunner"}
         tts_resp = self.bus.wait_for_response(Message("neon.get_tts", {},
-                                                      context),
+                                                      dict(context)),
                                               context["ident"])
-        self.assertEqual(tts_resp.context, context)
+        for key in context:
+            if key != "timing":
+                self.assertEqual(context[key], tts_resp.context[key])
+        self.assertIsInstance(tts_resp.context['timing']['response_sent'],
+                              float)
         self.assertIsInstance(tts_resp.data.get("error"), str)
         self.assertEqual(tts_resp.data["error"], "No text provided.")
 
@@ -97,9 +101,13 @@ class TestAPIMethods(unittest.TestCase):
                    "ident": "1234",
                    "user": "TestRunner"}
         tts_resp = self.bus.wait_for_response(Message("neon.get_tts",
-                                                      {"text": 123}, context),
+                                                      {"text": 123},
+                                                      dict(context)),
                                               context["ident"], timeout=60)
-        self.assertEqual(tts_resp.context, context)
+        for key in context:
+            self.assertEqual(context[key], tts_resp.context[key])
+        self.assertIsInstance(tts_resp.context['timing']['response_sent'],
+                              float)
         self.assertTrue(tts_resp.data.get("error")
                         .startswith("text is not a str:"))
 
@@ -109,9 +117,13 @@ class TestAPIMethods(unittest.TestCase):
                    "ident": str(time()),
                    "user": "TestRunner"}
         tts_resp = self.bus.wait_for_response(Message("neon.get_tts",
-                                                      {"text": text}, context),
+                                                      {"text": text},
+                                                      dict(context)),
                                               context["ident"], timeout=60)
-        self.assertEqual(tts_resp.context, context)
+        for key in context:
+            self.assertEqual(context[key], tts_resp.context[key])
+        self.assertIsInstance(tts_resp.context['timing']['response_sent'],
+                              float)
         responses = tts_resp.data
         self.assertIsInstance(responses, dict)
         print(responses)
