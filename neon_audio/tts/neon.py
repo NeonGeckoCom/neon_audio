@@ -133,6 +133,19 @@ def get_requested_tts_languages(msg) -> list:
     return tts_reqs
 
 
+def _sort_timing_metrics(timings: dict) -> dict:
+    """
+    Sort combined timing context into timestamps and durations
+    """
+    to_return = {"timestamps": {}, "durations": {}}
+    for key, val in timings:
+        if val > 10000.0:  # Arbitrary value that is > longest duration
+            to_return["timestamps"][key] = val
+        else:
+            to_return["durations"][key] = val
+    return to_return
+
+
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue, bus=None):
         LOG.info("Initializing NeonPlaybackThread")
@@ -172,8 +185,8 @@ class NeonPlaybackThread(PlaybackThread):
         message.context["timestamp"] = time()
         self.bus.emit(message.forward("neon.metric",
                                       {"name": "local_interaction",
-                                       "timestamp": time(),
-                                       "timing": message.context['timing']}))
+                                       **_sort_timing_metrics(
+                                           message.context['timing'])}))
 
 
 class WrappedTTS(TTS):
@@ -369,8 +382,8 @@ class WrappedTTS(TTS):
                 message.context["timestamp"] = time()
                 self.bus.emit(message.forward("neon.metric",
                                               {"name": "klat_interaction",
-                                               "timestamp": time(),
-                                               "timing": message.context['timing']}))
+                                               **_sort_timing_metrics(
+                                                   message.context['timing'])}))
             else:
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
