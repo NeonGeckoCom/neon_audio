@@ -62,8 +62,6 @@ def on_started():
 
 
 class NeonPlaybackService(PlaybackService):
-    _stopwatch = Stopwatch("get_tts")
-
     def __init__(self, ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping, alive_hook=on_alive,
                  started_hook=on_started, watchdog=lambda: None,
@@ -162,15 +160,16 @@ class NeonPlaybackService(PlaybackService):
                      f"core defaults will be used.")
         message.context.setdefault('timing', dict())
         if text:
+            stopwatch = Stopwatch("get_tts", allow_reporting=True, bus=self.bus)
             if not isinstance(text, str):
                 message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(
                     ident, data={"error": f"text is not a str: {text}"}))
                 return
             try:
-                with self._stopwatch:
+                with stopwatch:
                     responses = self.tts.get_multiple_tts(message)
-                message.context['timing']['get_tts'] = self._stopwatch.time
+                message.context['timing']['get_tts'] = stopwatch.time
                 LOG.debug(f"Emitting response: {responses}")
                 message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(ident, data=responses))
