@@ -231,8 +231,6 @@ class WrappedTTS(TTS):
         os.makedirs(cache_dir, exist_ok=True)
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
-        base_engine._stopwatch = Stopwatch("get_tts", allow_reporting=True,
-                                           bus=base_engine.bus)
 
         return base_engine
 
@@ -350,23 +348,24 @@ class WrappedTTS(TTS):
 
         Arguments:
             sentence: (str) Sentence to be spoken
-            ident: (str) Id reference to current interaction
+            ident: (str) ID reference to current interaction
             listen: (bool) True if listen should be triggered at the end
                     of the utterance.
             message: (Message) Message associated with request
             kwargs: (dict) optional keyword arguments to be passed to
             TTS engine get_tts method
         """
+        stopwatch = Stopwatch("get_tts", True, self.bus)
         if message:
             # Make sure to set the speaking signal now
             if not message.context.get("klat_data"):
                 create_signal("isSpeaking")
             # TODO: Should sentence and ident be added to message context? DM
             message.data["text"] = sentence
-            with self._stopwatch:
+            with stopwatch:
                 responses = self.get_multiple_tts(message, **kwargs)
             message.context.setdefault('timing', dict())
-            message.context['timing']['get_tts'] = self._stopwatch.time
+            message.context['timing']['get_tts'] = stopwatch.time
             LOG.debug(f"responses={responses}")
 
             ident = message.context.get('speak_ident') or ident
