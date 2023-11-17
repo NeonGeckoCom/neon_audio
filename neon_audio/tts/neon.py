@@ -133,38 +133,65 @@ def get_requested_tts_languages(msg) -> list:
     return tts_reqs
 
 
+def _sort_timing_metrics(timings: dict) -> dict:
+    """
+    Sort combined timing context into timestamps and durations
+    """
+    to_return = {"timestamps": {}, "durations": {}}
+    for key, val in timings.items():
+        if val > 10000.0:  # Arbitrary value that is > longest duration
+            to_return["timestamps"][key] = val
+        else:
+            to_return["durations"][key] = val
+    LOG.debug(f"Parsed timing context: {to_return}")
+    return to_return
+
+
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue, bus=None):
         LOG.info("Initializing NeonPlaybackThread")
         PlaybackThread.__init__(self, queue, bus=bus)
 
-    def begin_audio(self, message=None):
+    def begin_audio(self, message: Message = None):
         # TODO: Mark signals for deprecation
         check_for_signal("isSpeaking")
         create_signal("isSpeaking")
+        assert message is not None
+        message.context.setdefault("timing", dict())
+        message.context['timing']['audio_begin'] = time()
         PlaybackThread.begin_audio(self, message)
 
     def end_audio(self, listen, message=None):
+        assert message is not None
         PlaybackThread.end_audio(self, listen, message)
+        message.context['timing']['audio_end'] = time()
         # TODO: Mark signals for deprecation
         check_for_signal("isSpeaking")
 
     def _play(self):
+        # wav_file, vis, listen, ident, message
         ident = self._now_playing[3]
-        if not ident and len(self._now_playing) >= 5 and \
-                isinstance(self._now_playing[4], Message):
-            LOG.debug("Handling new style playback")
-            ident = self._now_playing[4].context.get('ident') or \
-                self._now_playing[4].context.get('session',
-                                                 {}).get('session_id')
+        message = self._now_playing[4]
+        if not ident:
+            LOG.error("Missing ident. Try getting from Message context")
+            ident = message.context.get('ident') or \
+                message.context.get('session', {}).get('session_id')
+
         super()._play()
+        # Notify playback is finished
         LOG.info(f"Played {ident}")
-        self.bus.emit(Message(ident))
+        self.bus.emit(message.forward(ident))
+
+        # Report timing metrics
+        message.context["timestamp"] = time()
+        self.bus.emit(message.forward("neon.metric",
+                                      {"name": "local_interaction",
+                                       **_sort_timing_metrics(
+                                           message.context['timing'])}))
 
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
-        base_engine._stopwatch = Stopwatch("get_tts")
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
@@ -204,6 +231,7 @@ class WrappedTTS(TTS):
         os.makedirs(cache_dir, exist_ok=True)
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
+
         return base_engine
 
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
@@ -320,23 +348,24 @@ class WrappedTTS(TTS):
 
         Arguments:
             sentence: (str) Sentence to be spoken
-            ident: (str) Id reference to current interaction
+            ident: (str) ID reference to current interaction
             listen: (bool) True if listen should be triggered at the end
                     of the utterance.
             message: (Message) Message associated with request
             kwargs: (dict) optional keyword arguments to be passed to
             TTS engine get_tts method
         """
+        stopwatch = Stopwatch("get_tts", True, self.bus)
         if message:
             # Make sure to set the speaking signal now
             if not message.context.get("klat_data"):
                 create_signal("isSpeaking")
             # TODO: Should sentence and ident be added to message context? DM
             message.data["text"] = sentence
-            with self._stopwatch:
+            with stopwatch:
                 responses = self.get_multiple_tts(message, **kwargs)
             message.context.setdefault('timing', dict())
-            message.context['timing']['get_tts'] = self._stopwatch.time
+            message.context['timing']['get_tts'] = stopwatch.time
             LOG.debug(f"responses={responses}")
 
             ident = message.context.get('speak_ident') or ident
@@ -352,6 +381,11 @@ class WrappedTTS(TTS):
                 # Emit `ident` message to indicate this transaction is complete
                 LOG.debug(f"Notify playback completed for {ident}")
                 self.bus.emit(message.forward(ident))
+                message.context["timestamp"] = time()
+                self.bus.emit(message.forward("neon.metric",
+                                              {"name": "klat_interaction",
+                                               **_sort_timing_metrics(
+                                                   message.context['timing'])}))
             else:
                 # Local user has multiple configured languages (or genders)
                 for r in responses.values():
