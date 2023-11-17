@@ -160,7 +160,8 @@ class NeonPlaybackService(PlaybackService):
                      f"core defaults will be used.")
         message.context.setdefault('timing', dict())
         if text:
-            stopwatch = Stopwatch("get_tts", allow_reporting=True, bus=self.bus)
+            stopwatch = Stopwatch("api_get_tts", allow_reporting=True,
+                                  bus=self.bus)
             if not isinstance(text, str):
                 message.context['timing']['response_sent'] = time()
                 self.bus.emit(message.reply(
