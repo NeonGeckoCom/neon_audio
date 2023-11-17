@@ -192,7 +192,6 @@ class NeonPlaybackThread(PlaybackThread):
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
-        base_engine._stopwatch = Stopwatch("get_tts", allow_reporting=True)
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
@@ -232,6 +231,9 @@ class WrappedTTS(TTS):
         os.makedirs(cache_dir, exist_ok=True)
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
+        base_engine._stopwatch = Stopwatch("get_tts", allow_reporting=True,
+                                           bus=base_engine.bus)
+
         return base_engine
 
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
