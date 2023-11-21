@@ -139,6 +139,9 @@ def _sort_timing_metrics(timings: dict) -> dict:
     """
     to_return = {"timestamps": {}, "durations": {}}
     for key, val in timings.items():
+        if not isinstance(val, float):
+            LOG.warning(f"Invalid timing metric: {key}={val}")
+            continue
         if val > 10000.0:  # Arbitrary value that is > longest duration
             to_return["timestamps"][key] = val
         else:
