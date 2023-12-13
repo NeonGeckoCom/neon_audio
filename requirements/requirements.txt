@@ -3,7 +3,7 @@ ovos-utils~=0.0.35
 ovos-config~=0.0.10
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0.24
-neon-utils[network]~=1.6,>=1.7.1a3
+neon-utils[network]~=1.8
 click~=8.0
 click-default-group~=1.2
 ovos-bus-client~=0.0.3
