@@ -27,11 +27,14 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import click
+import sys
+from typing import List
 
 from click_default_group import DefaultGroup
 from neon_utils.packaging_utils import get_package_version_spec
 from neon_utils.configuration_utils import init_config_dir
 from ovos_config.config import Configuration
+from ovos_utils.log import LOG, log_deprecation
 
 
 @click.group("neon-audio", cls=DefaultGroup,
@@ -44,7 +47,6 @@ def neon_audio_cli(version: bool = False):
     if version:
         click.echo(f"neon_audio version "
                    f"{get_package_version_spec('neon_audio')}")
-
 
 @neon_audio_cli.command(help="Start Neon Audio module")
 @click.option("--module", "-m", default=None,
@@ -70,7 +72,6 @@ def run(module, package, force_install):
     main()
     click.echo("Audio Client Shutdown")
 
-
 @neon_audio_cli.command(help="Install a TTS Plugin")
 @click.option("--module", "-m", default=None,
               help="TTS Plugin to configure")
@@ -80,6 +81,7 @@ def run(module, package, force_install):
               help="Force pip installation of configured module")
 def install_plugin(module, package, force_install):
     from neon_audio.utils import install_tts_plugin
+    log_deprecation("`install-plugin` replaced by `install-dependencies`", "2.0.0")
     audio_config = Configuration()
 
     if force_install and not (package or module):
@@ -92,6 +94,18 @@ def install_plugin(module, package, force_install):
         if not module:
             click.echo("Plugin specified without module")
 
+
+@neon_audio_cli.command(help="Install neon-audio module dependencies from config & cli")
+@click.option("--package", "-p", default=[], multiple=True,
+              help="Additional package to install (can be repeated)")
+def install_dependencies(package: List[str]):
+    from neon_utils.packaging_utils import install_packages_from_pip
+    from neon_audio.utils import build_extra_dependency_list
+    config = Configuration()
+    dependencies = build_extra_dependency_list(config, list(package))
+    result = install_packages_from_pip("neon-audio", dependencies)
+    LOG.info(f"pip exit code: {result}")
+    sys.exit(result)
 
 @neon_audio_cli.command(help="Install a TTS Plugin")
 @click.option("--plugin", "-p", default=None,

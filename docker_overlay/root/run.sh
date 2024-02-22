@@ -28,5 +28,5 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Plugin installation must occur in a separate thread, before module load, for the entry point to be loaded.
-neon-audio install-plugin -f
+neon-audio install-dependencies
 neon-audio run

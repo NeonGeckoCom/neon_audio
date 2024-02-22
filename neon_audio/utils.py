@@ -26,9 +26,11 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from typing import List, Union
 from tempfile import mkstemp
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, deprecated
 from neon_utils.packaging_utils import get_package_dependencies
+from ovos_config.config import Configuration
 
 
 def patch_config(config: dict = None):
@@ -43,7 +45,6 @@ def patch_config(config: dict = None):
     local_config = LocalConf(USER_CONFIG)
     local_config.update(config)
     local_config.store()
-
 
 def _plugin_to_package(plugin: str) -> str:
     """
@@ -62,7 +63,18 @@ def _plugin_to_package(plugin: str) -> str:
     }
     return known_plugins.get(plugin) or plugin
 
+def build_extra_dependency_list(config: Union[dict, Configuration], additional: List[str] = []) -> str:
+    extra_dependencies = config.get("extra_dependencies", {})
+    dependencies = additional + extra_dependencies.get("global", []) + extra_dependencies.get("audio", [])
 
+    if config["tts"].get("package_spec"):
+        dependencies.append(config["tts"].get("package_spec"))
+    elif config["tts"].get("module"):
+        dependencies.append(config["tts"]["module"])
+
+    return dependencies
+
+@deprecated("Replaced by `neon_utils.packaging_utils.install_packages_from_pip`", "2.0.0")
 def install_tts_plugin(plugin: str) -> bool:
     """
     Install a tts plugin using pip
