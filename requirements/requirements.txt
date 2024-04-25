@@ -1,5 +1,5 @@
 ovos-audio~=0.0.2a38
-ovos-utils~=0.0.35
+ovos-utils>=0.0.35,<0.2.0
 ovos-config~=0.0.10
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0.24
