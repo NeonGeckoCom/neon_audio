@@ -34,11 +34,11 @@ from os.path import dirname
 from time import time
 
 from json_database import JsonStorageXDG
+from ovos_bus_client.apis.enclosure import EnclosureAPI
 from ovos_bus_client.message import Message
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
 from ovos_plugin_manager.templates.tts import TTS
-from ovos_utils.enclosure.api import EnclosureAPI
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
