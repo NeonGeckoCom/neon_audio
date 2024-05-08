@@ -174,7 +174,7 @@ class TTSBaseClassTests(unittest.TestCase):
 
     def test_validator_invalid(self):
         tts = DummyTTS("", {})
-        tts.validator.validate_lang = Mock(return_value=False)
+        tts.validator.validate_lang = Mock(side_effect=Exception("Validation Error"))
 
         with self.assertRaises(Exception):
             tts.validator.validate()
