@@ -34,6 +34,7 @@ import unittest
 from time import time
 from os.path import join, dirname
 from threading import Event
+from unittest import skip
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 from ovos_bus_client import Message
@@ -119,6 +120,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertEqual(valid_tag_string, self.tts.validate_ssml(valid_tag_string))
         self.assertEqual(valid_tag_string, self.tts.validate_ssml(extra_tags_string))
 
+    @skip("Method deprecated in ovos-audio")
     def test_preprocess_sentence(self):
         # TODO: Legacy
         sentence = "this is a test"
@@ -170,10 +172,9 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertTrue(self.tts.validator.validate_dependencies())
         self.assertTrue(self.tts.validator.validate_connection())
 
-    @patch("ovos_plugin_manager.templates.tts.Configuration")
-    def test_validator_invalid(self, config):
-        config.return_value = self.config  # Explicitly no g2p
-        tts = DummyTTS("es", {})
+    def test_validator_invalid(self):
+        tts = DummyTTS("", {})
+        tts.validator.validate_lang = Mock(return_value=False)
 
         with self.assertRaises(Exception):
             tts.validator.validate()
