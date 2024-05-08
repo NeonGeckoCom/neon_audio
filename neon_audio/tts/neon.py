@@ -251,7 +251,8 @@ class WrappedTTS(TTS):
         init_signal_bus(self.bus)
         TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
         TTS.playback.set_bus(self.bus)
-        TTS.playback.attach_tts(self)
+        if hasattr(TTS.playback, "attach_tts"):
+            TTS.playback.attach_tts(self)
         if not TTS.playback.enclosure:
             TTS.playback.enclosure = EnclosureAPI(self.bus)
         if not TTS.playback.is_alive():
