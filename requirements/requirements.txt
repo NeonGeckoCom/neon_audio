@@ -3,7 +3,7 @@ ovos-utils>=0.0.35,<0.2.0
 ovos-config~=0.0.10
 phoneme-guesser~=0.1
 # TODO: Alpha patching ovos-audio dependency resolution
-ovos-plugin-manager~=0.0.24,>=0.0.26a16
+ovos-plugin-manager~=0.0.24,>=0.0.26a16,<0.0.26a21
 neon-utils[network]~=1.9
 click~=8.0
 click-default-group~=1.2
