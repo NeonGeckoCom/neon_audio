@@ -1,16 +1,15 @@
-ovos-audio~=0.0.2a42
+ovos-audio~=0.2
 ovos-utils>=0.0.35,<0.2.0
 ovos-config~=0.0.10
 phoneme-guesser~=0.1
-# TODO: Alpha patching ovos-audio dependency resolution
-ovos-plugin-manager~=0.0.24,>=0.0.26a16,<0.0.26a21
+ovos-plugin-manager~=0.0,>=0.0.26
 neon-utils[network]~=1.9
 click~=8.0
 click-default-group~=1.2
 ovos-bus-client~=0.0.3
 
 # Default OCP backend + plugins
-ovos-plugin-common-play~=0.0.6
+ovos-plugin-common-play~=0.1
 ovos-ocp-m3u-plugin~=0.0.1
 ovos-ocp-rss-plugin~=0.0.2
 ovos-ocp-files-plugin~=0.13

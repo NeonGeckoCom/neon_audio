@@ -89,6 +89,10 @@ def install_tts_plugin(plugin: str) -> bool:
         LOG.info(f"Constraints={constraints}")
     LOG.info(f"Requested installation of plugin: {plugin}")
     returned = pip.main(['install', _plugin_to_package(plugin), "-c", tmp_file])
+    if returned != 0:
+        LOG.warning(f"Installation failed. attempting with pre-release enabled")
+        returned = pip.main(['install', '--pre', _plugin_to_package(plugin),
+                             "-c", tmp_file])
     LOG.info(f"pip status: {returned}")
     return returned == 0
 
