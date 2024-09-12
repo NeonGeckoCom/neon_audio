@@ -1,4 +1,4 @@
 # Install default plugins
 neon-lang-plugin-libretranslate~=0.2,>=0.2.1a2
 ovos-tts-plugin-mimic~=0.2
-neon-tts-plugin-coqui~=0.7
+neon-tts-plugin-coqui~=0.7,>=0.8.1a3
