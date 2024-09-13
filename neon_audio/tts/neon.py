@@ -368,6 +368,7 @@ class WrappedTTS(TTS):
             kwargs: (dict) optional keyword arguments to be passed to
             TTS engine get_tts method
         """
+        LOG.debug(f"execute: {sentence}")
         stopwatch = Stopwatch("get_tts", True, self.bus)
         if message:
             # Make sure to set the speaking signal now

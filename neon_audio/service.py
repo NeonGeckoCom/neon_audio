@@ -31,6 +31,8 @@ import ovos_audio.tts
 import ovos_plugin_manager.templates.tts
 
 from threading import Event
+
+from ovos_bus_client import Message
 from ovos_utils.log import LOG, log_deprecation
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
@@ -186,3 +188,8 @@ class NeonPlaybackService(PlaybackService):
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
         PlaybackService.init_messagebus(self)
+
+    def execute_tts(self, utterance, ident, listen=False, message: Message = None):
+        LOG.debug(f"START {utterance}")
+        PlaybackService.execute_tts(self, utterance, ident, listen, message)
+        LOG.debug(f"END {utterance}")
