@@ -204,6 +204,7 @@ class NeonPlaybackThread(PlaybackThread):
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
+        LOG.info(f"Creating wrapped TTS object for {base_engine}")
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility

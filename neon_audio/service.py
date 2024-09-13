@@ -32,7 +32,6 @@ import ovos_plugin_manager.templates.tts
 
 from threading import Event
 
-from ovos_bus_client import Message
 from ovos_utils.log import LOG, log_deprecation
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
