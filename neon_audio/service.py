@@ -188,8 +188,3 @@ class NeonPlaybackService(PlaybackService):
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
         PlaybackService.init_messagebus(self)
-
-    def execute_tts(self, utterance, ident, listen=False, message: Message = None):
-        LOG.debug(f"START {utterance}")
-        PlaybackService.execute_tts(self, utterance, ident, listen, message)
-        LOG.debug(f"END {utterance}")
