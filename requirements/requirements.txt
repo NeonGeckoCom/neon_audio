@@ -1,6 +1,6 @@
 ovos-audio~=0.2
-ovos-utils>=0.0.35,<0.2.0
-ovos-config~=0.0.10
+ovos-utils~=0.0,>=0.0.35
+ovos-config~=0.0,>=0.0.10
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0,>=0.0.26
 neon-utils[network]~=1.9
