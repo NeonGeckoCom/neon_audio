@@ -31,6 +31,7 @@ import inspect
 import os
 
 from os.path import dirname
+from threading import Thread, Event
 from time import time
 
 from json_database import JsonStorageXDG
@@ -153,7 +154,22 @@ def _sort_timing_metrics(timings: dict) -> dict:
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue, bus=None):
         LOG.info("Initializing NeonPlaybackThread")
-        PlaybackThread.__init__(self, queue, bus=bus)
+        try:
+            PlaybackThread.__init__(self, queue, bus=bus)
+        except TypeError:
+            LOG.error("Failed to call PlaybackThread init; patching...")
+            from ovos_audio.transformers import TTSTransformersService
+            Thread.__init__(self, daemon=True)
+            self.queue = queue or TTS.queue
+            self._terminated = False
+            self._processing_queue = False
+            self._do_playback = Event()
+            self.enclosure = None
+            self.p = None
+            self.bus = bus or None
+            self._now_playing = None
+            self._started = Event()
+            self.tts_transform = TTSTransformersService(self.bus)
 
     def begin_audio(self, message: Message = None):
         # TODO: Mark signals for deprecation
