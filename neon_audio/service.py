@@ -91,11 +91,14 @@ class NeonPlaybackService(PlaybackService):
         init_signal_bus(bus)
         init_signal_handlers()
         from neon_utils.signal_utils import create_signal, check_for_signal
+        import ovos_audio.service
         ovos_audio.service.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
         ovos_plugin_manager.templates.tts.create_signal = create_signal
 
         from neon_audio.tts.neon import NeonPlaybackThread
+        import ovos_audio.playback
+        ovos_audio.playback.PlaybackThread = NeonPlaybackThread
         ovos_audio.service.PlaybackThread = NeonPlaybackThread
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus,

@@ -60,5 +60,5 @@ class TTSFactory(OVOSTTSFactory):
             return
         tts = WrappedTTS(clazz, tts_lang, tts_config)
         tts.validator.validate()
-        LOG.debug(f"Initialized tts: {tts.tts_name}")
+        LOG.info(f"Initialized tts: {tts.tts_name}")
         return tts
