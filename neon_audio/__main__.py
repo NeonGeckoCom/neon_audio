@@ -60,6 +60,7 @@ def main(*args, **kwargs):
     setup_locale()
     try:
         service = NeonPlaybackService(*args, **kwargs)
+        LOG.info("Service init completed")
         service.start()
         wait_for_exit_signal()
     except Exception as e:

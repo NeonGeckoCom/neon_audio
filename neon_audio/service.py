@@ -90,7 +90,6 @@ class NeonPlaybackService(PlaybackService):
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus,
                                  disable_ocp, validate_source=False)
-        self.playback_thread.join()
         del self.playback_thread
         from neon_audio.tts.neon import NeonPlaybackThread
         from ovos_plugin_manager.tts import TTS
