@@ -85,16 +85,7 @@ class NeonPlaybackService(PlaybackService):
             from neon_audio.utils import patch_config
             patch_config(audio_config)
         bus = bus or get_messagebus()
-        # Override all the previously loaded signal methods
-        from neon_utils.signal_utils import init_signal_handlers, \
-            init_signal_bus
-        init_signal_bus(bus)
-        init_signal_handlers()
-        from neon_utils.signal_utils import create_signal, check_for_signal
-        import ovos_audio.service
-        ovos_audio.service.check_for_signal = check_for_signal
-        ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
-        ovos_plugin_manager.templates.tts.create_signal = create_signal
+        from neon_utils.signal_utils import create_signal
 
         from neon_audio.tts.neon import NeonPlaybackThread
         import ovos_audio.playback
