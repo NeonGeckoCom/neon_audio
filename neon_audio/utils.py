@@ -85,6 +85,7 @@ def install_tts_plugin(plugin: str) -> bool:
     _, tmp_file = mkstemp()
     with open(tmp_file, 'w') as f:
         constraints = '\n'.join(get_package_dependencies("neon-audio"))
+        constraints += '\n'.join(get_package_dependencies("ovos-audio"))
         f.write(constraints)
         LOG.info(f"Constraints={constraints}")
     LOG.info(f"Requested installation of plugin: {plugin}")
