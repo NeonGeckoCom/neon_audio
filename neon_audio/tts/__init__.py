@@ -53,11 +53,11 @@ class TTSFactory(OVOSTTSFactory):
                                                                   "en-us")
 
         tts_config = get_tts_config(config)
-        tts_lang = tts_config["lang"]
         clazz = OVOSTTSFactory.get_class(tts_config)
         if not clazz:
             LOG.error(f"Could not find plugin: {tts_config.get('module')}")
             return
-        tts = WrappedTTS(clazz, tts_lang, tts_config)
+        tts = WrappedTTS(clazz, config=tts_config)
         tts.validator.validate()
+        LOG.info(f"Initialized tts: {tts.tts_name}")
         return tts

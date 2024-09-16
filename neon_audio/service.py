@@ -31,6 +31,7 @@ import ovos_audio.tts
 import ovos_plugin_manager.templates.tts
 
 from threading import Event
+
 from ovos_utils.log import LOG, log_deprecation
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
@@ -84,21 +85,15 @@ class NeonPlaybackService(PlaybackService):
             from neon_audio.utils import patch_config
             patch_config(audio_config)
         bus = bus or get_messagebus()
-        # Override all the previously loaded signal methods
-        from neon_utils.signal_utils import init_signal_handlers, \
-            init_signal_bus
-        init_signal_bus(bus)
-        init_signal_handlers()
-        from neon_utils.signal_utils import create_signal, check_for_signal
-        ovos_audio.service.check_for_signal = check_for_signal
-        ovos_plugin_manager.templates.tts.check_for_signal = check_for_signal
-        ovos_plugin_manager.templates.tts.create_signal = create_signal
+        from neon_utils.signal_utils import create_signal
 
-        from neon_audio.tts.neon import NeonPlaybackThread
-        ovos_audio.service.PlaybackThread = NeonPlaybackThread
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus,
-                                 disable_ocp)
+                                 disable_ocp, validate_source=False)
+        del self.playback_thread
+        from neon_audio.tts.neon import NeonPlaybackThread
+        from ovos_plugin_manager.tts import TTS
+        self.playback_thread = NeonPlaybackThread(TTS.queue, self.bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API
@@ -186,3 +181,6 @@ class NeonPlaybackService(PlaybackService):
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
         PlaybackService.init_messagebus(self)
+        self.bus.remove("speak", PlaybackService.handle_speak)
+        self.bus.on("speak", self.handle_speak)
+        LOG.info("Initialized messagebus")

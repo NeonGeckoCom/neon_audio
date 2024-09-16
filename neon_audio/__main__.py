@@ -58,15 +58,21 @@ def main(*args, **kwargs):
     check_for_signal("isSpeaking")
     Lock("audio")
     setup_locale()
-    service = NeonPlaybackService(*args, **kwargs)
-    service.start()
-    wait_for_exit_signal()
+    try:
+        service = NeonPlaybackService(*args, **kwargs)
+        LOG.info("Service init completed")
+        service.start()
+        wait_for_exit_signal()
+    except Exception as e:
+        LOG.exception(e)
+        service = None
     if malloc_running:
         try:
             print_malloc(snapshot_malloc())
         except Exception as e:
             LOG.error(e)
-    service.shutdown()
+    if service:
+        service.shutdown()
 
 
 def deprecated_entrypoint():

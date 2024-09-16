@@ -172,6 +172,7 @@ class NeonPlaybackThread(PlaybackThread):
         check_for_signal("isSpeaking")
 
     def _play(self):
+        LOG.debug(f"Start playing {self._now_playing}")
         # wav_file, vis, listen, ident, message
         ident = self._now_playing[3]
         message = self._now_playing[4]
@@ -180,7 +181,7 @@ class NeonPlaybackThread(PlaybackThread):
             ident = message.context.get('ident') or \
                 message.context.get('session', {}).get('session_id')
 
-        super()._play()
+        PlaybackThread._play(self)
         # Notify playback is finished
         LOG.info(f"Played {ident}")
         self.bus.emit(message.forward(ident))
@@ -192,9 +193,18 @@ class NeonPlaybackThread(PlaybackThread):
                                        **_sort_timing_metrics(
                                            message.context['timing'])}))
 
+    def pause(self):
+        LOG.debug(f"Playback thread paused")
+        PlaybackThread.pause(self)
+
+    def resume(self):
+        LOG.debug(f"Playback thread resumed")
+        PlaybackThread.resume(self)
+
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
+        LOG.info(f"Creating wrapped TTS object for {base_engine}")
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
@@ -306,7 +316,6 @@ class WrappedTTS(TTS):
         for request in tts_requested:
             tts_lang = kwargs["lang"] = request["language"]
             # Check if requested tts lang matches internal (text) lang
-            # TODO: `self.lang` should come from the incoming message
             if tts_lang.split("-")[0] != skill_lang.split("-")[0]:
                 self.cached_translations.setdefault(tts_lang, {})
 
@@ -359,6 +368,7 @@ class WrappedTTS(TTS):
             kwargs: (dict) optional keyword arguments to be passed to
             TTS engine get_tts method
         """
+        LOG.debug(f"execute: {sentence}")
         stopwatch = Stopwatch("get_tts", True, self.bus)
         if message:
             # Make sure to set the speaking signal now
@@ -400,6 +410,7 @@ class WrappedTTS(TTS):
                         vis = self.viseme(r["phonemes"]) if r["phonemes"] \
                             else None
                         # queue for playback
+                        LOG.debug(f"Queue playback of: {wav_file}")
                         self.queue.put((wav_file, vis, listen, ident, message))
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
