@@ -74,6 +74,7 @@ def build_extra_dependency_list(config: Union[dict, Configuration], additional: 
 
     return dependencies
 
+
 @deprecated("Replaced by `neon_utils.packaging_utils.install_packages_from_pip`", "2.0.0")
 def install_tts_plugin(plugin: str) -> bool:
     """
@@ -85,7 +86,7 @@ def install_tts_plugin(plugin: str) -> bool:
     _, tmp_file = mkstemp()
     with open(tmp_file, 'w') as f:
         constraints = '\n'.join(get_package_dependencies("neon-audio"))
-        constraints += '\n'.join(get_package_dependencies("ovos-audio"))
+        constraints += '\n' + '\n'.join(get_package_dependencies("ovos-audio"))
         f.write(constraints)
         LOG.info(f"Constraints={constraints}")
     LOG.info(f"Requested installation of plugin: {plugin}")
