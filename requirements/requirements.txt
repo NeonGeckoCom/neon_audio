@@ -3,8 +3,7 @@ ovos-utils~=0.0,>=0.0.35
 ovos-config~=0.0,>=0.0.10
 phoneme-guesser~=0.1
 ovos-plugin-manager~=0.0,>=0.0.26a16
-#neon-utils[network,sentry]~=1.9
-neon-utils[network,sentry,signal]@git+https://github.com/neongeckocom/neon-utils@FIX_SignalExtraDependencies#egg=neon-utils
+neon-utils[network,sentry,signal]~=1.9,>=1.12.1a2
 click~=8.0
 click-default-group~=1.2
 ovos-bus-client~=0.0,>=0.0.3
