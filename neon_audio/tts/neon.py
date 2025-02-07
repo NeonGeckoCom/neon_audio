@@ -245,6 +245,9 @@ class WrappedTTS(TTS):
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
 
+        # Patch breaking change in OVOS that normalizes en-US instead of en-us
+        base_engine.lang = base_engine.lang.lower()
+
         return base_engine
 
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
