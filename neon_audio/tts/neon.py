@@ -210,6 +210,7 @@ class WrappedTTS(TTS):
         # TODO: Below method is only to bridge compatibility
         base_engine._get_tts = cls._get_tts
         base_engine._init_playback = cls._init_playback
+        base_engine.lang = cls.lang
         return cls._init_neon(base_engine, *args, **kwargs)
 
     @staticmethod
@@ -248,7 +249,7 @@ class WrappedTTS(TTS):
     @property
     def lang(self):
         # Patch breaking change in OVOS that normalizes en-US instead of en-us
-        return super().lang.lower()
+        return TTS.lang.fget(self).lower()
 
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
         # shutdown any previous thread
