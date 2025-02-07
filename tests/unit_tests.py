@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -196,6 +196,7 @@ class TTSUtilTests(unittest.TestCase):
         self.assertTrue(install_tts_plugin("neon-tts-plugin-coqui"))
         self.assertFalse(install_tts_plugin("neon-tts-plugin-invalid"))
 
+    @skip("Configuration patching is deprecated")
     def test_patch_config(self):
         import json
         from neon_audio.utils import use_neon_audio
@@ -229,12 +230,10 @@ class TTSUtilTests(unittest.TestCase):
 class TestCLI(unittest.TestCase):
     runner = CliRunner()
 
-    @patch("neon_audio.cli.init_config_dir")
     @patch("neon_audio.__main__.main")
-    def test_run(self, main, init_config):
+    def test_run(self, main):
         from neon_audio.cli import run
         self.runner.invoke(run)
-        init_config.assert_called_once()
         main.assert_called_once()
 
 

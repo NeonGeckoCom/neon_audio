@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -210,6 +210,7 @@ class WrappedTTS(TTS):
         # TODO: Below method is only to bridge compatibility
         base_engine._get_tts = cls._get_tts
         base_engine._init_playback = cls._init_playback
+        base_engine.lang = cls.lang
         return cls._init_neon(base_engine, *args, **kwargs)
 
     @staticmethod
@@ -223,8 +224,6 @@ class WrappedTTS(TTS):
         base_engine.keys = {}
 
         base_engine.language_config = language_config
-        base_engine.lang = base_engine.lang or language_config.get("user",
-                                                                   "en-us")
         try:
             if language_config.get('detection_module'):
                 # Prevent loading a detector if not configured
@@ -246,6 +245,11 @@ class WrappedTTS(TTS):
         base_engine.cached_translations = cached_translations
 
         return base_engine
+
+    @property
+    def lang(self):
+        # Patch breaking change in OVOS that normalizes en-US instead of en-us
+        return TTS.lang.fget(self).lower()
 
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
         # shutdown any previous thread
