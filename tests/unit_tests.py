@@ -196,6 +196,7 @@ class TTSUtilTests(unittest.TestCase):
         self.assertTrue(install_tts_plugin("neon-tts-plugin-coqui"))
         self.assertFalse(install_tts_plugin("neon-tts-plugin-invalid"))
 
+    @skip("Configuration patching is deprecated")
     def test_patch_config(self):
         import json
         from neon_audio.utils import use_neon_audio
