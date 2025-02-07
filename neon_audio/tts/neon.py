@@ -223,8 +223,6 @@ class WrappedTTS(TTS):
         base_engine.keys = {}
 
         base_engine.language_config = language_config
-        base_engine.lang = base_engine.lang or language_config.get("user",
-                                                                   "en-us")
         try:
             if language_config.get('detection_module'):
                 # Prevent loading a detector if not configured
@@ -245,10 +243,12 @@ class WrappedTTS(TTS):
         base_engine.cache_dir = cache_dir
         base_engine.cached_translations = cached_translations
 
-        # Patch breaking change in OVOS that normalizes en-US instead of en-us
-        base_engine.lang = base_engine.lang.lower()
-
         return base_engine
+
+    @property
+    def lang(self):
+        # Patch breaking change in OVOS that normalizes en-US instead of en-us
+        return super().lang.lower()
 
     def _init_playback(self, playback_thread: NeonPlaybackThread = None):
         # shutdown any previous thread
