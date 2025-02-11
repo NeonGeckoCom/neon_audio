@@ -1,11 +1,11 @@
-FROM python:3.10-slim as base
+FROM python:3.10-slim AS base
 
 LABEL vendor=neon.ai \
     ai.neon.name="neon-audio"
 
-ENV OVOS_CONFIG_BASE_FOLDER neon
-ENV OVOS_CONFIG_FILENAME neon.yaml
-ENV XDG_CONFIG_HOME /config
+ENV OVOS_CONFIG_BASE_FOLDER=neon
+ENV OVOS_CONFIG_FILENAME=neon.yaml
+ENV XDG_CONFIG_HOME=/config
 
 RUN  apt-get update && \
      apt-get install -y \
@@ -47,5 +47,5 @@ RUN neon-audio install-dependencies
 
 CMD ["/root/run.sh"]
 
-FROM base as default_model
+FROM base AS default_model
 RUN neon-audio init-plugin
