@@ -34,7 +34,7 @@ from neon_utils.signal_utils import init_signal_bus, \
 from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
-from ovos_utils.process_utils import reset_sigint_handler, PIDLock as Lock
+from ovos_utils.process_utils import reset_sigint_handler
 
 from neon_audio.service import NeonPlaybackService
 
@@ -56,7 +56,6 @@ def main(*args, **kwargs):
 
     reset_sigint_handler()
     check_for_signal("isSpeaking")
-    Lock("audio")
     setup_locale()
     try:
         service = NeonPlaybackService(*args, **kwargs)
