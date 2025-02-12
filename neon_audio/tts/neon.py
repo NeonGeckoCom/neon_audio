@@ -215,6 +215,7 @@ class NeonPlaybackThread(PlaybackThread):
                 LOG.debug(f"START PLAYBACK")
                 self._now_playing = (data, visemes, listen, tts_id, message)
                 self._play()
+                assert self._now_playing is None
                 LOG.debug("END PLAYBACK")
             except Empty:
                 pass
@@ -281,6 +282,10 @@ class WrappedTTS(TTS):
             TTS.playback.shutdown()
         if not isinstance(playback_thread, NeonPlaybackThread):
             LOG.exception(f"Received invalid playback_thread: {playback_thread}")
+            if isinstance(playback_thread, PlaybackThread):
+                LOG.warning(f"Joining {playback_thread}")
+                playback_thread.stop()
+                playback_thread.join()
             playback_thread = None
         init_signal_bus(self.bus)
         TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
