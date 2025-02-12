@@ -182,6 +182,7 @@ class TTSBaseClassTests(unittest.TestCase):
         tts.shutdown()
 
     def test_get_tts(self):
+        # TODO: Deprecate
         test_file_path = join(dirname(__file__), "test.wav")
         file, phonemes = self.tts._get_tts("test", wav_file=test_file_path,
                                            speaker={})

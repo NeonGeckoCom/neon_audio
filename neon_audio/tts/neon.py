@@ -31,14 +31,19 @@ import inspect
 import os
 
 from os.path import dirname
+from queue import Empty
 from time import time
+from typing import List
 
 from json_database import JsonStorageXDG
 from ovos_bus_client.apis.enclosure import EnclosureAPI
 from ovos_bus_client.message import Message
+from ovos_bus_client.util import get_message_lang
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
-from ovos_plugin_manager.templates.tts import TTS
+from ovos_plugin_manager.templates.g2p import OutOfVocabulary
+from ovos_plugin_manager.templates.tts import TTS, TTSContext
+from ovos_utils.sound import play_audio
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
@@ -50,7 +55,7 @@ from ovos_audio.playback import PlaybackThread
 from ovos_config.config import Configuration
 
 
-def get_requested_tts_languages(msg) -> list:
+def get_requested_tts_languages(msg) -> List[dict]:
     """
     Builds a list of the requested TTS for a given spoken response
     :param msg: Message associated with request
@@ -212,7 +217,7 @@ class WrappedTTS(TTS):
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
-        base_engine._get_tts = cls._get_tts
+        # base_engine._get_tts = cls._get_tts
         base_engine._init_playback = cls._init_playback
         base_engine.lang = cls.lang
         return cls._init_neon(base_engine, *args, **kwargs)
@@ -293,6 +298,7 @@ class WrappedTTS(TTS):
             os.makedirs(dirname(file), exist_ok=True)
             if os.path.isfile(file):
                 LOG.info(f"Using cached TTS audio")
+                # TODO: In this case, playback is not reported properly
                 return file, None
             plugin_kwargs = dict()
             if "speaker" in inspect.signature(self.get_tts).parameters:
@@ -336,7 +342,8 @@ class WrappedTTS(TTS):
                 LOG.info(f"Got translated sentence: {tx_sentence}")
             else:
                 tx_sentence = sentence
-            wav_file, phonemes = self._get_tts(tx_sentence, request, **kwargs)
+            kwargs['speaker'] = request
+            wav_file, phonemes = self.synth(tx_sentence, **kwargs)
 
             # If this is the first response, populate translation and phonemes
             responses.setdefault(tts_lang, {"sentence": tx_sentence,
