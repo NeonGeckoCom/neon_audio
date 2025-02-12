@@ -31,7 +31,7 @@ import inspect
 import os
 
 from os.path import dirname
-from pathlib import Path
+from queue import Empty
 from time import time
 from typing import List
 
@@ -204,9 +204,22 @@ class NeonPlaybackThread(PlaybackThread):
         LOG.debug(f"Playback thread resumed")
         PlaybackThread.resume(self)
 
-    def run(self, *args, **kwargs):
-        LOG.info("Playback thread started")
-        PlaybackThread.run(self, *args, **kwargs)
+    def run(self, cb=None):
+        LOG.info("PlaybackThread started")
+        self._do_playback.set()
+        self._started.set()
+        while not self._terminated:
+            self._do_playback.wait()
+            try:
+                data, visemes, listen, tts_id, message = self.queue.get(timeout=2)
+                LOG.debug(f"START PLAYBACK")
+                self._now_playing = (data, visemes, listen, tts_id, message)
+                self._play()
+                LOG.debug("END PLAYBACK")
+            except Empty:
+                pass
+            except Exception as e:
+                LOG.error(e)
 
 
 class WrappedTTS(TTS):
@@ -425,7 +438,9 @@ class WrappedTTS(TTS):
                         # queue for playback
                         LOG.debug(f"Queue playback of: {wav_file} in "
                                   f"queue={self.queue}")
-                        self.queue.put((wav_file, vis, listen, ident, message))
+                        element = (wav_file, vis, listen, ident, message)
+                        LOG.debug(f"Queue element={element}")
+                        self.queue.put(element)
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
             LOG.warning(f'no Message associated with TTS request: {ident}')
