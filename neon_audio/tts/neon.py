@@ -209,7 +209,7 @@ class WrappedTTS(TTS):
         base_engine.execute = cls.execute
         base_engine.get_multiple_tts = cls.get_multiple_tts
         # TODO: Below method is only to bridge compatibility
-        # base_engine._get_tts = cls._get_tts
+        base_engine._get_tts = cls._get_tts
         base_engine._init_playback = cls._init_playback
         base_engine.lang = cls.lang
         return cls._init_neon(base_engine, *args, **kwargs)
