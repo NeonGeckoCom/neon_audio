@@ -31,19 +31,15 @@ import inspect
 import os
 
 from os.path import dirname
-from queue import Empty
 from time import time
 from typing import List
 
 from json_database import JsonStorageXDG
 from ovos_bus_client.apis.enclosure import EnclosureAPI
 from ovos_bus_client.message import Message
-from ovos_bus_client.util import get_message_lang
 from ovos_plugin_manager.language import OVOSLangDetectionFactory,\
     OVOSLangTranslationFactory
-from ovos_plugin_manager.templates.g2p import OutOfVocabulary
-from ovos_plugin_manager.templates.tts import TTS, TTSContext
-from ovos_utils.sound import play_audio
+from ovos_plugin_manager.templates.tts import TTS
 
 from neon_utils.file_utils import encode_file_to_base64_string
 from neon_utils.message_utils import resolve_message
@@ -343,7 +339,8 @@ class WrappedTTS(TTS):
             else:
                 tx_sentence = sentence
             kwargs['speaker'] = request
-            wav_file, phonemes = self.synth(tx_sentence, **kwargs)
+            audio_obj, phonemes = self.synth(tx_sentence, **kwargs)
+            wav_file = audio_obj.path
 
             # If this is the first response, populate translation and phonemes
             responses.setdefault(tts_lang, {"sentence": tx_sentence,
