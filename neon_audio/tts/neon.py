@@ -281,7 +281,8 @@ class WrappedTTS(TTS):
                 LOG.exception("Error starting the playback thread")
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
-        # TODO: Signature should be made to match ovos-audio
+        log_deprecation("This method is deprecated without replacement",
+                        "1.6.0")
         if any([x in inspect.signature(self.get_tts).parameters
                 for x in {"speaker", "wav_file"}]):
             LOG.info(f"Legacy Neon TTS signature found ({self.__class__.__name__})")
@@ -294,7 +295,6 @@ class WrappedTTS(TTS):
             os.makedirs(dirname(file), exist_ok=True)
             if os.path.isfile(file):
                 LOG.info(f"Using cached TTS audio")
-                # TODO: In this case, playback is not reported properly
                 return file, None
             plugin_kwargs = dict()
             if "speaker" in inspect.signature(self.get_tts).parameters:
@@ -421,11 +421,8 @@ class WrappedTTS(TTS):
                         vis = self.viseme(r["phonemes"]) if r["phonemes"] \
                             else None
                         # queue for playback
-                        LOG.debug(f"Queue playback of: {wav_file} in "
-                                  f"queue={self.queue}")
-                        element = (wav_file, vis, listen, ident, message)
-                        LOG.debug(f"Queue element={element}")
-                        self.queue.put(element)
+                        LOG.debug(f"Queue playback of: {wav_file}")
+                        self.queue.put((wav_file, vis, listen, ident, message))
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
             LOG.warning(f'no Message associated with TTS request: {ident}')
