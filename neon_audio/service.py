@@ -93,10 +93,6 @@ class NeonPlaybackService(PlaybackService):
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus,
                                  disable_ocp, validate_source=False)
-        del self.playback_thread
-        from neon_audio.tts.neon import NeonPlaybackThread
-        from ovos_plugin_manager.tts import TTS
-        self.playback_thread = NeonPlaybackThread(TTS.queue, self.bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API

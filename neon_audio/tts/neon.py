@@ -31,7 +31,6 @@ import inspect
 import os
 
 from os.path import dirname
-from queue import Empty
 from time import time
 from typing import List
 
@@ -174,7 +173,6 @@ class NeonPlaybackThread(PlaybackThread):
         check_for_signal("isSpeaking")
 
     def _play(self):
-        # TODO Not called?
         LOG.debug(f"Start playing {self._now_playing} from queue={self.queue}")
         # wav_file, vis, listen, ident, message
         ident = self._now_playing[3]
@@ -203,24 +201,6 @@ class NeonPlaybackThread(PlaybackThread):
     def resume(self):
         LOG.debug(f"Playback thread resumed")
         PlaybackThread.resume(self)
-
-    def run(self, cb=None):
-        LOG.info("PlaybackThread started")
-        self._do_playback.set()
-        self._started.set()
-        while not self._terminated:
-            self._do_playback.wait()
-            try:
-                data, visemes, listen, tts_id, message = self.queue.get(timeout=2)
-                LOG.debug(f"START PLAYBACK")
-                self._now_playing = (data, visemes, listen, tts_id, message)
-                self._play()
-                assert self._now_playing is None
-                LOG.debug("END PLAYBACK")
-            except Empty:
-                pass
-            except Exception as e:
-                LOG.error(e)
 
 
 class WrappedTTS(TTS):
