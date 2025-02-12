@@ -32,6 +32,7 @@ import os
 
 from os.path import dirname
 from time import time
+from typing import List
 
 from json_database import JsonStorageXDG
 from ovos_bus_client.apis.enclosure import EnclosureAPI
@@ -50,7 +51,7 @@ from ovos_audio.playback import PlaybackThread
 from ovos_config.config import Configuration
 
 
-def get_requested_tts_languages(msg) -> list:
+def get_requested_tts_languages(msg) -> List[dict]:
     """
     Builds a list of the requested TTS for a given spoken response
     :param msg: Message associated with request
@@ -152,7 +153,7 @@ def _sort_timing_metrics(timings: dict) -> dict:
 
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue, bus=None):
-        LOG.info("Initializing NeonPlaybackThread")
+        LOG.info(f"Initializing NeonPlaybackThread with queue={queue}")
         PlaybackThread.__init__(self, queue, bus=bus)
 
     def begin_audio(self, message: Message = None):
@@ -172,7 +173,7 @@ class NeonPlaybackThread(PlaybackThread):
         check_for_signal("isSpeaking")
 
     def _play(self):
-        LOG.debug(f"Start playing {self._now_playing}")
+        LOG.debug(f"Start playing {self._now_playing} from queue={self.queue}")
         # wav_file, vis, listen, ident, message
         ident = self._now_playing[3]
         message = self._now_playing[4]
@@ -260,7 +261,11 @@ class WrappedTTS(TTS):
                 return
             TTS.playback.shutdown()
         if not isinstance(playback_thread, NeonPlaybackThread):
-            LOG.exception("Received invalid playback_thread")
+            LOG.exception(f"Received invalid playback_thread: {playback_thread}")
+            if isinstance(playback_thread, PlaybackThread):
+                LOG.warning(f"Joining {playback_thread}")
+                playback_thread.stop()
+                playback_thread.join()
             playback_thread = None
         init_signal_bus(self.bus)
         TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
@@ -276,7 +281,8 @@ class WrappedTTS(TTS):
                 LOG.exception("Error starting the playback thread")
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
-        # TODO: Signature should be made to match ovos-audio
+        log_deprecation("This method is deprecated without replacement",
+                        "1.6.0")
         if any([x in inspect.signature(self.get_tts).parameters
                 for x in {"speaker", "wav_file"}]):
             LOG.info(f"Legacy Neon TTS signature found ({self.__class__.__name__})")
@@ -332,8 +338,9 @@ class WrappedTTS(TTS):
                 LOG.info(f"Got translated sentence: {tx_sentence}")
             else:
                 tx_sentence = sentence
-            wav_file, phonemes = self._get_tts(tx_sentence, request, **kwargs)
-
+            kwargs['speaker'] = request
+            audio_obj, phonemes = self.synth(tx_sentence, **kwargs)
+            wav_file = str(audio_obj)
             # If this is the first response, populate translation and phonemes
             responses.setdefault(tts_lang, {"sentence": tx_sentence,
                                             "translated": tx_sentence != sentence,

@@ -80,20 +80,19 @@ class NeonPlaybackService(PlaybackService):
         :param bus: Connected MessageBusClient
         :param disable_ocp: if True, disable OVOS Common Play service
         """
+        from neon_utils.signal_utils import create_signal
+        # Patch import so PlaybackService creates a `NeonPlaybackThread` object
+        from neon_audio.tts.neon import NeonPlaybackThread
+        ovos_audio.service.PlaybackThread = NeonPlaybackThread
+
         if audio_config:
             LOG.info("Updating global config with passed config")
             from neon_audio.utils import patch_config
             patch_config(audio_config)
         bus = bus or get_messagebus()
-        from neon_utils.signal_utils import create_signal
-
         PlaybackService.__init__(self, ready_hook, error_hook, stopping_hook,
                                  alive_hook, started_hook, watchdog, bus,
                                  disable_ocp, validate_source=False)
-        del self.playback_thread
-        from neon_audio.tts.neon import NeonPlaybackThread
-        from ovos_plugin_manager.tts import TTS
-        self.playback_thread = NeonPlaybackThread(TTS.queue, self.bus)
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API
