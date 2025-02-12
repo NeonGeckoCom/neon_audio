@@ -25,3 +25,11 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Patching deprecation warnings
+# TODO: Deprecate after migration to ovos-workshop 1.0+ requirement
+import ovos_workshop.resource_files
+import ovos_core.intent_services.stop_service
+from ovos_utils.bracket_expansion import expand_template
+ovos_workshop.resource_files.expand_options = expand_template
+ovos_core.intent_services.stop_service.expand_options = expand_template
