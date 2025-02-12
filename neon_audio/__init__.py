@@ -29,7 +29,5 @@
 # Patching deprecation warnings
 # TODO: Deprecate after migration to ovos-workshop 1.0+ requirement
 import ovos_workshop.resource_files
-import ovos_core.intent_services.stop_service
 from ovos_utils.bracket_expansion import expand_template
 ovos_workshop.resource_files.expand_options = expand_template
-ovos_core.intent_services.stop_service.expand_options = expand_template
