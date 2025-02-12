@@ -154,7 +154,7 @@ def _sort_timing_metrics(timings: dict) -> dict:
 
 class NeonPlaybackThread(PlaybackThread):
     def __init__(self, queue, bus=None):
-        LOG.info("Initializing NeonPlaybackThread")
+        LOG.info(f"Initializing NeonPlaybackThread with queue={queue}")
         PlaybackThread.__init__(self, queue, bus=bus)
 
     def begin_audio(self, message: Message = None):
@@ -174,7 +174,8 @@ class NeonPlaybackThread(PlaybackThread):
         check_for_signal("isSpeaking")
 
     def _play(self):
-        LOG.debug(f"Start playing {self._now_playing}")
+        # TODO Not called?
+        LOG.debug(f"Start playing {self._now_playing} from queue={self.queue}")
         # wav_file, vis, listen, ident, message
         ident = self._now_playing[3]
         message = self._now_playing[4]
@@ -422,7 +423,8 @@ class WrappedTTS(TTS):
                         vis = self.viseme(r["phonemes"]) if r["phonemes"] \
                             else None
                         # queue for playback
-                        LOG.debug(f"Queue playback of: {wav_file}")
+                        LOG.debug(f"Queue playback of: {wav_file} in "
+                                  f"queue={self.queue}")
                         self.queue.put((wav_file, vis, listen, ident, message))
                         self.handle_metric({"metric_type": "tts.queued"})
         else:
