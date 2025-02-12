@@ -201,6 +201,10 @@ class NeonPlaybackThread(PlaybackThread):
         LOG.debug(f"Playback thread resumed")
         PlaybackThread.resume(self)
 
+    def run(self, *args, **kwargs):
+        LOG.info("Playback thread started")
+        PlaybackThread.run(self, *args, **kwargs)
+
 
 class WrappedTTS(TTS):
     def __new__(cls, base_engine, *args, **kwargs):
@@ -260,7 +264,7 @@ class WrappedTTS(TTS):
                 return
             TTS.playback.shutdown()
         if not isinstance(playback_thread, NeonPlaybackThread):
-            LOG.exception("Received invalid playback_thread")
+            LOG.exception(f"Received invalid playback_thread: {playback_thread}")
             playback_thread = None
         init_signal_bus(self.bus)
         TTS.playback = playback_thread or NeonPlaybackThread(TTS.queue)
