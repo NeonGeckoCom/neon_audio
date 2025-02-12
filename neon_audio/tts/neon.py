@@ -31,6 +31,7 @@ import inspect
 import os
 
 from os.path import dirname
+from pathlib import Path
 from time import time
 from typing import List
 
@@ -340,8 +341,7 @@ class WrappedTTS(TTS):
                 tx_sentence = sentence
             kwargs['speaker'] = request
             audio_obj, phonemes = self.synth(tx_sentence, **kwargs)
-            wav_file = audio_obj.path
-
+            wav_file = str(audio_obj)
             # If this is the first response, populate translation and phonemes
             responses.setdefault(tts_lang, {"sentence": tx_sentence,
                                             "translated": tx_sentence != sentence,
