@@ -20,7 +20,7 @@ Audio:
       active: false
   default-backend: OCP
 MQ:
-  server: mq.2021.us
+  server: neon-rabbitmq
   port: 5672
   users:
     mq_handler:
