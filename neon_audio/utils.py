@@ -106,8 +106,11 @@ def init_tts_plugin(plugin: str):
     Initialize a specified plugin. Useful for doing one-time initialization
     before deployment
     """
+    LOG.warning(f"Initializing {plugin}")
     from ovos_plugin_manager.tts import load_tts_plugin
+    LOG.warning("Imported `load_tts_plugin`")
     plug = load_tts_plugin(plugin)
+    LOG.warning(f"Got plugin class: {plug}")
     if plug:
         LOG.info(f"Initializing plugin: {plugin}")
         plug()
