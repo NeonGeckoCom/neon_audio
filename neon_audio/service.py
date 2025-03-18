@@ -100,6 +100,7 @@ class NeonPlaybackService(PlaybackService):
         self.daemon = daemonic
 
     def handle_speak(self, message):
+        LOG.debug(f"Handling speak message: {message.data}")
         message.context.setdefault('destination', [])
         if isinstance(message.context['destination'], str):
             message.context['destination'] = [message.context['destination']]
@@ -180,6 +181,6 @@ class NeonPlaybackService(PlaybackService):
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
         PlaybackService.init_messagebus(self)
-        self.bus.remove("speak", PlaybackService.handle_speak)
-        self.bus.on("speak", self.handle_speak)
+        # self.bus.remove("speak", PlaybackService.handle_speak)
+        # self.bus.on("speak", self.handle_speak)
         LOG.info("Initialized messagebus")
