@@ -181,6 +181,4 @@ class NeonPlaybackService(PlaybackService):
     def init_messagebus(self):
         self.bus.on('neon.get_tts', self.handle_get_tts)
         PlaybackService.init_messagebus(self)
-        # self.bus.remove("speak", PlaybackService.handle_speak)
-        # self.bus.on("speak", self.handle_speak)
         LOG.info("Initialized messagebus")
