@@ -282,7 +282,7 @@ class WrappedTTS(TTS):
 
     def _get_tts(self, sentence: str, request: dict = None, **kwargs):
         log_deprecation("This method is deprecated without replacement",
-                        "1.6.0")
+                        "1.7.0")
         if any([x in inspect.signature(self.get_tts).parameters
                 for x in {"speaker", "wav_file"}]):
             LOG.info(f"Legacy Neon TTS signature found ({self.__class__.__name__})")
