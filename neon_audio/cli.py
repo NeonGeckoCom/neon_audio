@@ -61,15 +61,18 @@ def neon_audio_cli(version: bool = False):
 def run(module, package, force_install):
     from neon_audio.__main__ import main
     if force_install or module or package:
-        install_plugin(module, package, force_install)
+        try:
+            install_plugin(module, package, force_install)
+        except Exception as e:
+            click.echo(f"Failed to install plugin: {e}")
     if module:
         audio_config = Configuration()
         if module != audio_config["tts"]["module"]:
-            from neon_audio.utils import patch_config
-            click.echo("Updating config with module and package")
-            package = package or audio_config["tts"].get("package_spec")
-            patch_config({"tts": {"module": module,
-                                  "package_spec": package}})
+            LOG.warning(f"Requested a module to install ({module}), but config "
+                        f"specifies {audio_config['tts']['module']}."
+                        f"{audio_config['tts']['module']} will be loaded. "
+                        f"Configuration can be modified at "
+                        f"{audio_config.xdg_configs[0]}")
     click.echo("Starting Audio Client")
     main()
     click.echo("Audio Client Shutdown")
