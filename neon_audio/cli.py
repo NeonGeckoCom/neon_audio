@@ -69,8 +69,10 @@ def run(module, package, force_install):
         audio_config = Configuration()
         if module != audio_config["tts"]["module"]:
             LOG.warning(f"Requested a module to install ({module}), but config "
-                        f"specifies {audio_config['tts']['module']}. Configured"
-                        " module will be loaded.")
+                        f"specifies {audio_config['tts']['module']}."
+                        f"{audio_config['tts']['module']} will be loaded. "
+                        f"Configuration can be modified at "
+                        f"{audio_config.xdg_configs[0]}")
     click.echo("Starting Audio Client")
     main()
     click.echo("Audio Client Shutdown")
