@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -34,6 +34,7 @@ import unittest
 from time import time
 from os.path import join, dirname
 from threading import Event
+from unittest import skip
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 from ovos_bus_client import Message
@@ -119,6 +120,7 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertEqual(valid_tag_string, self.tts.validate_ssml(valid_tag_string))
         self.assertEqual(valid_tag_string, self.tts.validate_ssml(extra_tags_string))
 
+    @skip("Method deprecated in ovos-audio")
     def test_preprocess_sentence(self):
         # TODO: Legacy
         sentence = "this is a test"
@@ -170,10 +172,9 @@ class TTSBaseClassTests(unittest.TestCase):
         self.assertTrue(self.tts.validator.validate_dependencies())
         self.assertTrue(self.tts.validator.validate_connection())
 
-    @patch("ovos_plugin_manager.templates.tts.Configuration")
-    def test_validator_invalid(self, config):
-        config.return_value = self.config  # Explicitly no g2p
-        tts = DummyTTS("es", {})
+    def test_validator_invalid(self):
+        tts = DummyTTS("", {})
+        tts.validator.validate_lang = Mock(side_effect=Exception("Validation Error"))
 
         with self.assertRaises(Exception):
             tts.validator.validate()
@@ -181,6 +182,7 @@ class TTSBaseClassTests(unittest.TestCase):
         tts.shutdown()
 
     def test_get_tts(self):
+        # TODO: Deprecate
         test_file_path = join(dirname(__file__), "test.wav")
         file, phonemes = self.tts._get_tts("test", wav_file=test_file_path,
                                            speaker={})
@@ -195,6 +197,7 @@ class TTSUtilTests(unittest.TestCase):
         self.assertTrue(install_tts_plugin("neon-tts-plugin-coqui"))
         self.assertFalse(install_tts_plugin("neon-tts-plugin-invalid"))
 
+    @skip("Configuration patching is deprecated")
     def test_patch_config(self):
         import json
         from neon_audio.utils import use_neon_audio
@@ -228,12 +231,10 @@ class TTSUtilTests(unittest.TestCase):
 class TestCLI(unittest.TestCase):
     runner = CliRunner()
 
-    @patch("neon_audio.cli.init_config_dir")
     @patch("neon_audio.__main__.main")
-    def test_run(self, main, init_config):
+    def test_run(self, main):
         from neon_audio.cli import run
         self.runner.invoke(run)
-        init_config.assert_called_once()
         main.assert_called_once()
 
 

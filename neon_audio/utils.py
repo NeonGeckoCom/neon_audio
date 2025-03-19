@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -26,9 +26,11 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from typing import List, Union
 from tempfile import mkstemp
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, deprecated
 from neon_utils.packaging_utils import get_package_dependencies
+from ovos_config.config import Configuration
 
 
 def patch_config(config: dict = None):
@@ -43,7 +45,6 @@ def patch_config(config: dict = None):
     local_config = LocalConf(USER_CONFIG)
     local_config.update(config)
     local_config.store()
-
 
 def _plugin_to_package(plugin: str) -> str:
     """
@@ -63,6 +64,20 @@ def _plugin_to_package(plugin: str) -> str:
     return known_plugins.get(plugin) or plugin
 
 
+def build_extra_dependency_list(config: Union[dict, Configuration],
+                                additional: List[str] = []) -> List[str]:
+    extra_dependencies = config.get("extra_dependencies", {})
+    dependencies = additional + extra_dependencies.get("global", []) + extra_dependencies.get("audio", [])
+
+    if config["tts"].get("package_spec"):
+        dependencies.append(config["tts"].get("package_spec"))
+    elif config["tts"].get("module"):
+        dependencies.append(config["tts"]["module"])
+
+    return dependencies
+
+
+@deprecated("Replaced by `neon_utils.packaging_utils.install_packages_from_pip`", "2.0.0")
 def install_tts_plugin(plugin: str) -> bool:
     """
     Install a tts plugin using pip
@@ -73,10 +88,15 @@ def install_tts_plugin(plugin: str) -> bool:
     _, tmp_file = mkstemp()
     with open(tmp_file, 'w') as f:
         constraints = '\n'.join(get_package_dependencies("neon-audio"))
+        constraints += '\n' + '\n'.join(get_package_dependencies("ovos-audio"))
         f.write(constraints)
         LOG.info(f"Constraints={constraints}")
     LOG.info(f"Requested installation of plugin: {plugin}")
     returned = pip.main(['install', _plugin_to_package(plugin), "-c", tmp_file])
+    if returned != 0:
+        LOG.warning(f"Installation failed. attempting with pre-release enabled")
+        returned = pip.main(['install', '--pre', _plugin_to_package(plugin),
+                             "-c", tmp_file])
     LOG.info(f"pip status: {returned}")
     return returned == 0
 

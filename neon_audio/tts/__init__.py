@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -53,11 +53,11 @@ class TTSFactory(OVOSTTSFactory):
                                                                   "en-us")
 
         tts_config = get_tts_config(config)
-        tts_lang = tts_config["lang"]
         clazz = OVOSTTSFactory.get_class(tts_config)
         if not clazz:
             LOG.error(f"Could not find plugin: {tts_config.get('module')}")
             return
-        tts = WrappedTTS(clazz, tts_lang, tts_config)
+        tts = WrappedTTS(clazz, config=tts_config)
         tts.validator.validate()
+        LOG.info(f"Initialized tts: {tts.tts_name}")
         return tts

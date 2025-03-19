@@ -1,11 +1,11 @@
-FROM python:3.8-slim as base
+FROM python:3.10-slim AS base
 
 LABEL vendor=neon.ai \
     ai.neon.name="neon-audio"
 
-ENV OVOS_CONFIG_BASE_FOLDER neon
-ENV OVOS_CONFIG_FILENAME neon.yaml
-ENV XDG_CONFIG_HOME /config
+ENV OVOS_CONFIG_BASE_FOLDER=neon
+ENV OVOS_CONFIG_FILENAME=neon.yaml
+ENV XDG_CONFIG_HOME=/config
 
 RUN  apt-get update && \
      apt-get install -y \
@@ -43,9 +43,9 @@ RUN pip install wheel && \
 COPY docker_overlay/ /
 RUN chmod ugo+x /root/run.sh
 
-RUN neon-audio install-plugin -f
+RUN neon-audio install-dependencies
 
 CMD ["/root/run.sh"]
 
-FROM base as default_model
+FROM base AS default_model
 RUN neon-audio init-plugin

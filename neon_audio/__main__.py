@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2022 Neongecko.com Inc.
+# Copyright 2008-2025 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -34,7 +34,7 @@ from neon_utils.signal_utils import init_signal_bus, \
 from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
-from ovos_utils.process_utils import reset_sigint_handler, PIDLock as Lock
+from ovos_utils.process_utils import reset_sigint_handler
 
 from neon_audio.service import NeonPlaybackService
 
@@ -56,17 +56,22 @@ def main(*args, **kwargs):
 
     reset_sigint_handler()
     check_for_signal("isSpeaking")
-    Lock("audio")
     setup_locale()
-    service = NeonPlaybackService(*args, **kwargs)
-    service.start()
-    wait_for_exit_signal()
+    try:
+        service = NeonPlaybackService(*args, **kwargs)
+        LOG.info("Service init completed")
+        service.start()
+        wait_for_exit_signal()
+    except Exception as e:
+        LOG.exception(e)
+        service = None
     if malloc_running:
         try:
             print_malloc(snapshot_malloc())
         except Exception as e:
             LOG.error(e)
-    service.shutdown()
+    if service:
+        service.shutdown()
 
 
 def deprecated_entrypoint():
