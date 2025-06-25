@@ -18,8 +18,10 @@ RUN  curl https://forslund.github.io/mycroft-desktop-repo/mycroft-desktop.gpg.ke
      echo "deb http://forslund.github.io/mycroft-desktop-repo bionic main" \
      > /etc/apt/sources.list.d/mycroft-mimic.list
 
-RUN apt update && \
-    apt install -y \
+RUN apt-get update && \
+    apt-get install -y \
+    curl \
+    jq \
     alsa-utils \
     libasound2-plugins \
     pulseaudio-utils \
@@ -34,17 +36,18 @@ RUN apt update && \
     espeak-ng \
     git  # Added to handle installing plugins from git
 
-ADD . /neon_audio
+COPY . /neon_audio
 WORKDIR /neon_audio
 
-RUN pip install wheel && \
-    pip install .[docker] --extra-index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir wheel && \
+    pip install --no-cache-dir .[docker] --extra-index-url https://download.pytorch.org/whl/cpu
 
 COPY docker_overlay/ /
 RUN chmod ugo+x /root/run.sh
 
 RUN neon-audio install-dependencies
 
+HEALTHCHECK CMD "/opt/neon/healthcheck.sh"
 CMD ["/root/run.sh"]
 
 FROM base AS default_model
