@@ -28,7 +28,7 @@
 
 from typing import List, Union
 from tempfile import mkstemp
-from ovos_utils.log import LOG, deprecated
+from ovos_utils.log import LOG, deprecated, log_deprecation
 from neon_utils.packaging_utils import get_package_dependencies
 from ovos_config.config import Configuration
 
@@ -40,11 +40,13 @@ def patch_config(config: dict = None):
     """
     from ovos_config.config import LocalConf
     from ovos_config.locations import USER_CONFIG
+
     LOG.warning(f"Patching configuration with: {config}")
     config = config or dict()
     local_config = LocalConf(USER_CONFIG)
     local_config.update(config)
     local_config.store()
+
 
 def _plugin_to_package(plugin: str) -> str:
     """
@@ -59,25 +61,41 @@ def _plugin_to_package(plugin: str) -> str:
         "coqui": "neon-tts-plugin-coqui",
         "neon-tts-plugin-larynx-server": "neon-tts-plugin-larynx-server",
         "mozilla_local": "neon-tts-plugin-mozilla-local",
-        "mozilla_remote": "neon-tts-plugin-mozilla-remote"
+        "mozilla_remote": "neon-tts-plugin-mozilla-remote",
     }
     return known_plugins.get(plugin) or plugin
 
 
-def build_extra_dependency_list(config: Union[dict, Configuration],
-                                additional: List[str] = []) -> List[str]:
+def build_extra_dependency_list(
+    config: Union[dict, Configuration], additional: List[str] = []
+) -> List[str]:
     extra_dependencies = config.get("extra_dependencies", {})
-    dependencies = additional + extra_dependencies.get("global", []) + extra_dependencies.get("audio", [])
-
+    audio_deps = extra_dependencies.get("audio", [])
+    dependencies = (
+        additional + extra_dependencies.get("global", []) + audio_deps
+    )
     if config["tts"].get("package_spec"):
+        log_deprecation(
+            "`package_spec` configuration is deprecated. "
+            "Add dependencies to Configuration.extra_dependencies.audio",
+            "2.0.0",
+        )
         dependencies.append(config["tts"].get("package_spec"))
-    elif config["tts"].get("module"):
+    elif config["tts"].get("module") and audio_deps == []:
+        log_deprecation(
+            "`module` will no longer be installed. "
+            "Add dependencies to Configuration.extra_dependencies.audio",
+            "2.0.0",
+        )
         dependencies.append(config["tts"]["module"])
 
     return dependencies
 
 
-@deprecated("Replaced by `neon_utils.packaging_utils.install_packages_from_pip`", "2.0.0")
+@deprecated(
+    "Replaced by `neon_utils.packaging_utils.install_packages_from_pip`",
+    "2.0.0",
+)
 def install_tts_plugin(plugin: str) -> bool:
     """
     Install a tts plugin using pip
@@ -85,18 +103,24 @@ def install_tts_plugin(plugin: str) -> bool:
     :returns: True if the plugin installation is successful
     """
     import pip
+
     _, tmp_file = mkstemp()
-    with open(tmp_file, 'w') as f:
-        constraints = '\n'.join(get_package_dependencies("neon-audio"))
-        constraints += '\n' + '\n'.join(get_package_dependencies("ovos-audio"))
+    with open(tmp_file, "w") as f:
+        constraints = "\n".join(get_package_dependencies("neon-audio"))
+        constraints += "\n" + "\n".join(get_package_dependencies("ovos-audio"))
         f.write(constraints)
         LOG.info(f"Constraints={constraints}")
     LOG.info(f"Requested installation of plugin: {plugin}")
-    returned = pip.main(['install', _plugin_to_package(plugin), "-c", tmp_file])
+    returned = pip.main(
+        ["install", _plugin_to_package(plugin), "-c", tmp_file]
+    )
     if returned != 0:
-        LOG.warning(f"Installation failed. attempting with pre-release enabled")
-        returned = pip.main(['install', '--pre', _plugin_to_package(plugin),
-                             "-c", tmp_file])
+        LOG.warning(
+            f"Installation failed. attempting with pre-release enabled"
+        )
+        returned = pip.main(
+            ["install", "--pre", _plugin_to_package(plugin), "-c", tmp_file]
+        )
     LOG.info(f"pip status: {returned}")
     return returned == 0
 
@@ -107,6 +131,7 @@ def init_tts_plugin(plugin: str):
     before deployment
     """
     from ovos_plugin_manager.tts import load_tts_plugin
+
     plug = load_tts_plugin(plugin)
     if plug:
         LOG.info(f"Initializing plugin: {plugin}")
@@ -121,6 +146,8 @@ def use_neon_audio(func):
     This is used for ovos-utils config platform detection which uses the stack
     to determine which module config to return.
     """
+
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
+
     return wrapper
