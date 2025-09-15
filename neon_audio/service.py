@@ -25,14 +25,14 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from time import time
 
 import ovos_audio.tts
-import ovos_plugin_manager.templates.tts
 
 from threading import Event
-
+from time import time
 from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.process_utils import ProcessState
+from ovos_bus_client.message import Message
 from neon_audio.tts import TTSFactory
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.metrics_utils import Stopwatch
@@ -96,8 +96,32 @@ class NeonPlaybackService(PlaybackService):
         LOG.debug(f'Initialized tts={self._tts_hash} | '
                   f'fallback={self._fallback_tts_hash}')
         create_signal("neon_speak_api")   # Create signal so skills use API
+        self._status_from_bus_connection = False
         self._playback_timeout = 120
         self.daemon = daemonic
+
+    def check_health(self):
+        """
+        Check the health of the audio service and get an error state if the
+        service is unhealthy.
+        """
+        if self.status.state not in (ProcessState.READY, ProcessState.ERROR):
+            # Service is starting or stopping; skip health check
+            LOG.debug(f"Skipping health check during startup or shutdown. status={self.status.state}")
+            return
+        try:
+            self.bus.client.send(
+                    Message("neon.audio.health_check",
+                            context={"session": {"session_id": "default"}})
+                    .serialize())
+            if self._status_from_bus_connection:
+                self.status.set_ready()
+                self._status_from_bus_connection = False
+        except Exception as e:
+            LOG.error(f"Health check failed: {e}")
+            # Log without setting an error state as the bus should reconnect
+            self.status.set_error(f"Health check failed: {e}")
+            self._status_from_bus_connection = True
 
     def handle_speak(self, message):
         LOG.debug(f"Handling speak message: {message.data}")
@@ -151,8 +175,8 @@ class NeonPlaybackService(PlaybackService):
         ident = message.context.get("ident") or "neon.get_tts.response"
         LOG.info(f"Handling TTS request: {ident}")
         if not message.data.get("speaker"):
-            LOG.info(f"No speaker data with request, "
-                     f"core defaults will be used.")
+            LOG.info("No speaker data with request, "
+                     "core defaults will be used.")
         message.context.setdefault('timing', dict())
         if text:
             stopwatch = Stopwatch("api_get_tts", allow_reporting=True,

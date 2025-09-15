@@ -352,7 +352,7 @@ class WrappedTTS(TTS):
                 responses[tts_lang][request["gender"]] = wav_file
                 responses[tts_lang]["genders"].append(request["gender"])
                 # If this is a remote request, encode audio in the response
-                if message.context.get("klat_data") or \
+                if message.context.get("mq") or \
                         message.msg_type == "neon.get_tts":
                     responses[tts_lang].setdefault("audio", {})
                     responses[tts_lang]["audio"][request["gender"]] = \

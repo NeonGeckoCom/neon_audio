@@ -30,7 +30,7 @@ import click
 import sys
 
 from os import environ
-from typing import List
+from typing import List, Optional
 from click_default_group import DefaultGroup
 from neon_utils.packaging_utils import get_package_version_spec
 from ovos_config.config import Configuration
@@ -40,26 +40,54 @@ environ.setdefault("OVOS_CONFIG_BASE_FOLDER", "neon")
 environ.setdefault("OVOS_CONFIG_FILENAME", "neon.yaml")
 
 
-@click.group("neon-audio", cls=DefaultGroup,
-             no_args_is_help=True, invoke_without_command=True,
-             help="Neon Audio Commands\n\n"
-                  "See also: neon COMMAND --help")
-@click.option("--version", "-v", is_flag=True, required=False,
-              help="Print the current version")
+@click.group(
+    "neon-audio",
+    cls=DefaultGroup,
+    no_args_is_help=True,
+    invoke_without_command=True,
+    help="Neon Audio Commands\n\nSee also: neon COMMAND --help",
+)
+@click.option(
+    "--version",
+    "-v",
+    is_flag=True,
+    required=False,
+    help="Print the current version",
+)
 def neon_audio_cli(version: bool = False):
     if version:
-        click.echo(f"neon_audio version "
-                   f"{get_package_version_spec('neon_audio')}")
+        click.echo(
+            f"neon_audio version {get_package_version_spec('neon_audio')}"
+        )
+
 
 @neon_audio_cli.command(help="Start Neon Audio module")
-@click.option("--module", "-m", default=None,
-              help="TTS Plugin to configure")
-@click.option("--package", "-p", default=None,
-              help="TTS package spec to install")
-@click.option("--force-install", "-f", default=False, is_flag=True,
-              help="Force pip installation of configured module")
-def run(module, package, force_install):
+@click.option("--module", "-m", default=None, help="TTS Plugin to configure")
+@click.option(
+    "--package", "-p", default=None, help="TTS package spec to install"
+)
+@click.option(
+    "--force-install",
+    "-f",
+    default=False,
+    is_flag=True,
+    help="Force pip installation of configured module",
+)
+@click.option(
+    "--health-check-server-port",
+    "-hp",
+    type=int,
+    default=None,
+    help="Port for health check server to listen on",
+)
+def run(
+    module,
+    package,
+    force_install,
+    health_check_server_port: Optional[int] = None,
+):
     from neon_audio.__main__ import main
+
     if force_install or module or package:
         try:
             install_plugin(module, package, force_install)
@@ -68,25 +96,38 @@ def run(module, package, force_install):
     if module:
         audio_config = Configuration()
         if module != audio_config["tts"]["module"]:
-            LOG.warning(f"Requested a module to install ({module}), but config "
-                        f"specifies {audio_config['tts']['module']}."
-                        f"{audio_config['tts']['module']} will be loaded. "
-                        f"Configuration can be modified at "
-                        f"{audio_config.xdg_configs[0]}")
+            LOG.warning(
+                f"Requested a module to install ({module}), but config "
+                f"specifies {audio_config['tts']['module']}."
+                f"{audio_config['tts']['module']} will be loaded. "
+                f"Configuration can be modified at "
+                f"{audio_config.xdg_configs[0]}"
+            )
     click.echo("Starting Audio Client")
-    main()
+    main(
+        health_check_server_port=health_check_server_port,
+    )
     click.echo("Audio Client Shutdown")
 
+
 @neon_audio_cli.command(help="Install a TTS Plugin")
-@click.option("--module", "-m", default=None,
-              help="TTS Plugin to configure")
-@click.option("--package", "-p", default=None,
-              help="TTS package spec to install")
-@click.option("--force-install", "-f", default=False, is_flag=True,
-              help="Force pip installation of configured module")
+@click.option("--module", "-m", default=None, help="TTS Plugin to configure")
+@click.option(
+    "--package", "-p", default=None, help="TTS package spec to install"
+)
+@click.option(
+    "--force-install",
+    "-f",
+    default=False,
+    is_flag=True,
+    help="Force pip installation of configured module",
+)
 def install_plugin(module, package, force_install):
     from neon_audio.utils import install_tts_plugin
-    log_deprecation("`install-plugin` replaced by `install-dependencies`", "2.0.0")
+
+    log_deprecation(
+        "`install-plugin` replaced by `install-dependencies`", "2.0.0"
+    )
     audio_config = Configuration()
 
     if force_install and not (package or module):
@@ -100,22 +141,32 @@ def install_plugin(module, package, force_install):
             click.echo("Plugin specified without module")
 
 
-@neon_audio_cli.command(help="Install neon-audio module dependencies from config & cli")
-@click.option("--package", "-p", default=[], multiple=True,
-              help="Additional package to install (can be repeated)")
+@neon_audio_cli.command(
+    help="Install neon-audio module dependencies from config & cli"
+)
+@click.option(
+    "--package",
+    "-p",
+    default=[],
+    multiple=True,
+    help="Additional package to install (can be repeated)",
+)
 def install_dependencies(package: List[str]):
     from neon_utils.packaging_utils import install_packages_from_pip
     from neon_audio.utils import build_extra_dependency_list
+
     config = Configuration()
     dependencies = build_extra_dependency_list(config, list(package))
     result = install_packages_from_pip("neon-audio", dependencies)
     LOG.info(f"pip exit code: {result}")
     sys.exit(result)
 
+
 @neon_audio_cli.command(help="Install a TTS Plugin")
-@click.option("--plugin", "-p", default=None,
-              help="TTS module to init")
+@click.option("--plugin", "-p", default=None, help="TTS module to init")
 def init_plugin(plugin):
     from neon_audio.utils import init_tts_plugin
+
     plugin = plugin or Configuration()["tts"]["module"]
     init_tts_plugin(plugin)
+

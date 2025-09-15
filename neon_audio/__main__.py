@@ -28,9 +28,16 @@
 
 from neon_utils.messagebus_utils import get_messagebus
 from neon_utils.log_utils import init_log
-from neon_utils.process_utils import start_malloc, snapshot_malloc, print_malloc
-from neon_utils.signal_utils import init_signal_bus, \
-    init_signal_handlers, check_for_signal
+from neon_utils.process_utils import (
+    start_malloc,
+    snapshot_malloc,
+    print_malloc,
+)
+from neon_utils.signal_utils import (
+    init_signal_bus,
+    init_signal_handlers,
+    check_for_signal,
+)
 from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG
 from ovos_config.locale import setup_locale
@@ -44,8 +51,10 @@ def main(*args, **kwargs):
         LOG.warning("Found `config` kwarg, but expect `audio_config`")
         kwargs["audio_config"] = kwargs.pop("config")
     if kwargs.get("audio_config"):
-        LOG.warning("Passed configuration should be written to disk before"
-                    "module launch")
+        LOG.warning(
+            "Passed configuration should be written to disk before"
+            "module launch"
+        )
     init_log(log_name="audio")
     malloc_running = start_malloc(stack_depth=4)
     bus = get_messagebus()
@@ -58,8 +67,15 @@ def main(*args, **kwargs):
     check_for_signal("isSpeaking")
     setup_locale()
     try:
+        health_check_server_port = kwargs.pop("health_check_server_port", None)
         service = NeonPlaybackService(*args, **kwargs)
         LOG.info("Service init completed")
+        if health_check_server_port is not None:
+            from neon_utils.process_utils import start_health_check_server
+
+            start_health_check_server(
+                service.status, health_check_server_port, service.check_health
+            )
         service.start()
         wait_for_exit_signal()
     except Exception as e:
@@ -76,10 +92,12 @@ def main(*args, **kwargs):
 
 def deprecated_entrypoint():
     from ovos_utils.log import log_deprecation
-    log_deprecation("Use `neon-audio run` in place of "
-                    "`neon_audio_client`", "2.0.0")
+
+    log_deprecation(
+        "Use `neon-audio run` in place of `neon_audio_client`", "2.0.0"
+    )
     main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
