@@ -12,6 +12,7 @@ Audio:
       type: ovos_common_play
       active: true
       dbus_type: system
+      disable_mpris: true
     simple:
       type: ovos_audio_simple
       active: true
