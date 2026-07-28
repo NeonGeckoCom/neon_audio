@@ -31,3 +31,29 @@
 import ovos_workshop.resource_files
 from ovos_utils.bracket_expansion import expand_template
 ovos_workshop.resource_files.expand_options = expand_template
+
+# ovos-utils 0.8.5 removed `ovos_utils.signal`, which ovos-audio 0.x imports at
+# module scope. Register a compat module backed by `neon_utils.signal_utils`
+# before anything imports `ovos_audio`.
+# TODO: Remove after migration to ovos-audio 1.2+ requirement
+from importlib.util import find_spec
+
+if find_spec("ovos_utils.signal") is None:
+    import sys
+    from types import ModuleType
+    import ovos_utils
+
+    def _check_for_signal(signal_name, sec_lifetime=0, *_, **__):
+        from neon_utils.signal_utils import check_for_signal
+        return check_for_signal(signal_name, sec_lifetime)
+
+    def _create_signal(signal_name, *_, **__):
+        from neon_utils.signal_utils import create_signal
+        return create_signal(signal_name)
+
+    _signal_compat = ModuleType("ovos_utils.signal")
+    _signal_compat.check_for_signal = _check_for_signal
+    _signal_compat.create_signal = _create_signal
+
+    sys.modules["ovos_utils.signal"] = _signal_compat
+    ovos_utils.signal = _signal_compat
