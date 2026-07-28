@@ -1,36 +1,20 @@
 # Changelog
 
-## [1.6.1a4](https://github.com/NeonGeckoCom/neon_audio/tree/1.6.1a4) (2025-09-12)
+## [1.7.1a2](https://github.com/NeonGeckoCom/neon_audio/tree/1.7.1a2) (2026-07-28)
 
-[Full Changelog](https://github.com/NeonGeckoCom/neon_audio/compare/1.6.1a3...1.6.1a4)
-
-**Merged pull requests:**
-
-- Skip `module` installation when any dependency spec is configured [\#190](https://github.com/NeonGeckoCom/neon_audio/pull/190) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [1.6.1a3](https://github.com/NeonGeckoCom/neon_audio/tree/1.6.1a3) (2025-09-12)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon_audio/compare/1.6.1a2...1.6.1a3)
+[Full Changelog](https://github.com/NeonGeckoCom/neon_audio/compare/1.7.1a1...1.7.1a2)
 
 **Merged pull requests:**
 
-- Update automation and dependencies to prep for stable release [\#191](https://github.com/NeonGeckoCom/neon_audio/pull/191) ([NeonDaniel](https://github.com/NeonDaniel))
+- Patch package compatibility [\#196](https://github.com/NeonGeckoCom/neon_audio/pull/196) ([NeonDaniel](https://github.com/NeonDaniel))
 
-## [1.6.1a2](https://github.com/NeonGeckoCom/neon_audio/tree/1.6.1a2) (2025-06-25)
+## [1.7.1a1](https://github.com/NeonGeckoCom/neon_audio/tree/1.7.1a1) (2025-10-07)
 
-[Full Changelog](https://github.com/NeonGeckoCom/neon_audio/compare/1.6.1a1...1.6.1a2)
-
-**Merged pull requests:**
-
-- Implement status server [\#189](https://github.com/NeonGeckoCom/neon_audio/pull/189) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [1.6.1a1](https://github.com/NeonGeckoCom/neon_audio/tree/1.6.1a1) (2025-04-09)
-
-[Full Changelog](https://github.com/NeonGeckoCom/neon_audio/compare/1.6.0...1.6.1a1)
+[Full Changelog](https://github.com/NeonGeckoCom/neon_audio/compare/1.7.0...1.7.1a1)
 
 **Merged pull requests:**
 
-- Refactor to include audio data for all MQ-originated requests [\#188](https://github.com/NeonGeckoCom/neon_audio/pull/188) ([NeonDaniel](https://github.com/NeonDaniel))
+- feat: disable mpris by default in neon-audio containers [\#193](https://github.com/NeonGeckoCom/neon_audio/pull/193) ([mikejgray](https://github.com/mikejgray))
 
 
 
