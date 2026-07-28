@@ -16,3 +16,6 @@ ovos-ocp-m3u-plugin~=0.0,>=0.0.1
 ovos-ocp-rss-plugin~=0.0,>=0.0.2
 ovos-ocp-files-plugin~=0.13
 ovos-ocp-news-plugin~=0.0,>=0.0.3
+
+# Pin last ovos-lingua-franca release for Ukrainian support
+ovos-lingua-franca==0.4.8a13
