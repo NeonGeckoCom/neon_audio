@@ -151,6 +151,15 @@ class TTSBaseClassTests(unittest.TestCase):
         message.context['klat_data'] = dict()
         self.tts.execute(sentence, ident, message=message)
         klat_response.assert_called_once()
+        self.assertFalse(
+            klat_response.call_args[0][0].data['expect_response'])
+        # Check `listen` is forwarded so remote clients know to re-open the mic
+        klat_response.reset_mock()
+        self.tts.bus.once('klat.response', klat_response)
+        self.tts.execute(sentence, ident, listen=True, message=message)
+        klat_response.assert_called_once()
+        self.assertTrue(
+            klat_response.call_args[0][0].data['expect_response'])
         # Check not called without klat_data context
         self.tts.bus.once('klat.response', klat_response)
         message.context.pop('klat_data')
