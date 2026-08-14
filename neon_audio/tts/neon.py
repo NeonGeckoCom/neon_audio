@@ -402,7 +402,8 @@ class WrappedTTS(TTS):
                 self.bus.emit(
                     message.forward("klat.response",
                                     {"responses": responses,
-                                     "speaker": message.data.get("speaker")}))
+                                     "speaker": message.data.get("speaker"),
+                                     "expect_response": listen}))
                 # Emit `ident` message to indicate this transaction is complete
                 LOG.debug(f"Notify playback completed for {ident}")
                 self.bus.emit(message.forward(ident))
